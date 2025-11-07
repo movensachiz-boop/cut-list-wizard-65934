@@ -16,6 +16,7 @@ import { LoadCuttingList } from "@/components/LoadCuttingList";
 import { AIAssistant } from "@/components/AIAssistant";
 import { BibleVerseSlider } from "@/components/BibleVerseSlider";
 import { SheetOptimization } from "@/components/SheetOptimization";
+import { HardwareSelector } from "@/components/HardwareSelector";
 const MATERIAL_OPTIONS = [
 // Traditional Materials
 "White Melamine", "Azzano High Gloss", "Grain colored board", "Glass 4mm", "Storm grey matt", "Grigio Matt", "Laricina Melamine", "Storm grey gloss", "Masonite 2.3", "Masonite 2.4", "Postform", "PVC Board 2.4", "Black Board Matt", "Gloss white board", "Postform Large", "Caraz", "Luca polenta", "High Gloss melamine", "Plain Colored boards", "Iceberg white-Gloss", "Brookhill Matt", "Folkstone Grey Gloss", "Grigio", "Leatherwood", "Lucapolenta", "Lucaurban", "Masonite-Large", "PVC (2.4X1.2)", "PVC (2.75X1.83)", "High Gloss", "Superwood", "Congo Matt", "MDF Boards", "Shale Oak", "Black Matt", "Washed Shale", "Capuccino Board Matt", "Black Cherry board", "Harvard Cherry Board", "Granite", "Folkstone Grey Matt Board", "Calacatta Quartz", "Dunblane Grey Matt Board", "Color Board [TBA]", "Natural Oak Matt", "Plywood", "Camden Board Matt", "Cascade Board Matt", "Coimbra Board Matt", "Sahara Board Matt", "Quartz Star Gray", "Quartz (Star Range)", "American Walnut", "Quartz Slab", "Quartz Stone", "Royal Mahogany", "Calacatta Quartz Slab", "Calais Board", "Catalan Postform", "Dunblane gloss board", "Capuccino Gloss",
@@ -52,6 +53,8 @@ const Index = () => {
   const [bulkMaterial, setBulkMaterial] = useState("Superwood");
   const [bulkEdging, setBulkEdging] = useState("None");
   const [bulkEdgingMaterial, setBulkEdgingMaterial] = useState("White Edging");
+  const [currentCuttingListId, setCurrentCuttingListId] = useState<string | null>(null);
+  const [showHardwareSelector, setShowHardwareSelector] = useState(false);
   const {
     toast
   } = useToast();
@@ -539,7 +542,16 @@ const Index = () => {
           }}
         />
             <LoadCuttingList onLoad={(loadedItems) => setItems(loadedItems)} />
-            <SaveCuttingList items={items} />
+            <SaveCuttingList 
+              items={items} 
+              onSaved={(cuttingListId) => {
+                setCurrentCuttingListId(cuttingListId);
+                toast({
+                  title: "Cutting list saved",
+                  description: "You can now add hardware items to this list"
+                });
+              }}
+            />
           </div>
         </div>
 
@@ -932,6 +944,47 @@ const Index = () => {
               No items in cutting list. Start by adding dimensions above.
             </p>
           </Card>}
+
+        {/* Hardware Selection Section */}
+        {items.length > 0 && (
+          <div className="mt-10">
+            <Button 
+              onClick={() => setShowHardwareSelector(!showHardwareSelector)}
+              variant="outline"
+              size="lg"
+              className="mb-4 gap-2"
+            >
+              <Plus className="h-5 w-5" />
+              {showHardwareSelector ? "Hide Hardware Selection" : "Add Hardware Items"}
+            </Button>
+            
+            {showHardwareSelector && (
+              currentCuttingListId ? (
+                <HardwareSelector 
+                  cuttingListId={currentCuttingListId}
+                  onHardwareChange={() => {
+                    toast({
+                      title: "Hardware updated",
+                      description: "Your hardware selection has been saved"
+                    });
+                  }}
+                />
+              ) : (
+                <Card className="p-8 text-center glass-effect">
+                  <div className="flex flex-col items-center gap-4">
+                    <AlertTriangle className="h-12 w-12 text-muted-foreground" />
+                    <div>
+                      <h3 className="text-lg font-semibold mb-2">Save Cutting List First</h3>
+                      <p className="text-muted-foreground">
+                        Please save your cutting list to the database before adding hardware items
+                      </p>
+                    </div>
+                  </div>
+                </Card>
+              )
+            )}
+          </div>
+        )}
 
         {/* Sheet Optimization Section */}
         {items.length > 0 && (
