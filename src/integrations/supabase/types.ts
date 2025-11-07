@@ -14,7 +14,423 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      cutting_items: {
+        Row: {
+          confidence: string | null
+          created_at: string | null
+          cutting_list_id: string
+          edging_material: string
+          edging_type: string
+          id: string
+          length: number
+          material: string
+          notes: string | null
+          quantity: number
+          width: number
+        }
+        Insert: {
+          confidence?: string | null
+          created_at?: string | null
+          cutting_list_id: string
+          edging_material: string
+          edging_type: string
+          id?: string
+          length: number
+          material: string
+          notes?: string | null
+          quantity: number
+          width: number
+        }
+        Update: {
+          confidence?: string | null
+          created_at?: string | null
+          cutting_list_id?: string
+          edging_material?: string
+          edging_type?: string
+          id?: string
+          length?: number
+          material?: string
+          notes?: string | null
+          quantity?: number
+          width?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cutting_items_cutting_list_id_fkey"
+            columns: ["cutting_list_id"]
+            isOneToOne: false
+            referencedRelation: "cutting_lists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cutting_lists: {
+        Row: {
+          created_at: string | null
+          id: string
+          name: string
+          notes: string | null
+          total_items: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          total_items?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          total_items?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      hardware_entries: {
+        Row: {
+          created_at: string | null
+          custom_name: string | null
+          cutting_list_id: string
+          hardware_item_id: string | null
+          id: string
+          notes: string | null
+          quantity: number
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          custom_name?: string | null
+          cutting_list_id: string
+          hardware_item_id?: string | null
+          id?: string
+          notes?: string | null
+          quantity?: number
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          custom_name?: string | null
+          cutting_list_id?: string
+          hardware_item_id?: string | null
+          id?: string
+          notes?: string | null
+          quantity?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hardware_entries_cutting_list_id_fkey"
+            columns: ["cutting_list_id"]
+            isOneToOne: false
+            referencedRelation: "cutting_lists"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hardware_entries_hardware_item_id_fkey"
+            columns: ["hardware_item_id"]
+            isOneToOne: false
+            referencedRelation: "hardware_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hardware_items: {
+        Row: {
+          cost: number | null
+          created_at: string | null
+          id: string
+          import_code: string | null
+          name: string
+          price: number | null
+          short_name: string | null
+          supplier_website: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          cost?: number | null
+          created_at?: string | null
+          id?: string
+          import_code?: string | null
+          name: string
+          price?: number | null
+          short_name?: string | null
+          supplier_website?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          cost?: number | null
+          created_at?: string | null
+          id?: string
+          import_code?: string | null
+          name?: string
+          price?: number | null
+          short_name?: string | null
+          supplier_website?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          company_name: string | null
+          created_at: string | null
+          full_name: string | null
+          id: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          company_name?: string | null
+          created_at?: string | null
+          full_name?: string | null
+          id?: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          company_name?: string | null
+          created_at?: string | null
+          full_name?: string | null
+          id?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      project_approvals: {
+        Row: {
+          created_at: string | null
+          id: string
+          notes: string | null
+          project_id: string
+          requested_by: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          project_id: string
+          requested_by: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          project_id?: string
+          requested_by?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_approvals_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_comments: {
+        Row: {
+          content: string
+          created_at: string | null
+          id: string
+          project_id: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          id?: string
+          project_id: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          id?: string
+          project_id?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_comments_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      projects: {
+        Row: {
+          created_at: string | null
+          created_by: string
+          cutting_list: Json
+          description: string | null
+          id: string
+          name: string
+          optimization_result: Json | null
+          status: string | null
+          updated_at: string | null
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by: string
+          cutting_list: Json
+          description?: string | null
+          id?: string
+          name: string
+          optimization_result?: Json | null
+          status?: string | null
+          updated_at?: string | null
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string
+          cutting_list?: Json
+          description?: string | null
+          id?: string
+          name?: string
+          optimization_result?: Json | null
+          status?: string | null
+          updated_at?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "projects_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      uploaded_images: {
+        Row: {
+          analysis_result: Json | null
+          created_at: string | null
+          cutting_list_id: string | null
+          file_name: string
+          file_path: string
+          id: string
+          items_extracted: number | null
+          user_id: string
+        }
+        Insert: {
+          analysis_result?: Json | null
+          created_at?: string | null
+          cutting_list_id?: string | null
+          file_name: string
+          file_path: string
+          id?: string
+          items_extracted?: number | null
+          user_id: string
+        }
+        Update: {
+          analysis_result?: Json | null
+          created_at?: string | null
+          cutting_list_id?: string | null
+          file_name?: string
+          file_path?: string
+          id?: string
+          items_extracted?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "uploaded_images_cutting_list_id_fkey"
+            columns: ["cutting_list_id"]
+            isOneToOne: false
+            referencedRelation: "cutting_lists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workspace_members: {
+        Row: {
+          created_at: string | null
+          id: string
+          invited_by: string | null
+          role: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          invited_by?: string | null
+          role: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          invited_by?: string | null
+          role?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspace_members_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workspaces: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          name: string
+          owner_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          owner_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          owner_id?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
