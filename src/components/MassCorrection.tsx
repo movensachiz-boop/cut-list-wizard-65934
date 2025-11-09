@@ -6,6 +6,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Wand2 } from "lucide-react";
 import { toast } from "sonner";
+import { SmartSelect } from "@/components/SmartSelect";
+
+const MATERIAL_OPTIONS = [
+  "White Melamine", "Azzano High Gloss", "Grain colored board", "Glass 4mm", "Storm grey matt", "Grigio Matt", "Laricina Melamine", "Storm grey gloss", "Masonite 2.3", "Masonite 2.4", "Postform", "PVC Board 2.4", "Black Board Matt", "Gloss white board", "Postform Large", "Caraz", "Luca polenta", "High Gloss melamine", "Plain Colored boards", "Iceberg white-Gloss", "Brookhill Matt", "Folkstone Grey Gloss", "Grigio", "Leatherwood", "Lucapolenta", "Lucaurban", "Masonite-Large", "PVC (2.4X1.2)", "PVC (2.75X1.83)", "High Gloss", "Superwood", "Congo Matt", "MDF Boards", "Shale Oak", "Black Matt", "Washed Shale", "Capuccino Board Matt", "Black Cherry board", "Harvard Cherry Board", "Granite", "Folkstone Grey Matt Board", "Calacatta Quartz", "Dunblane Grey Matt Board", "Color Board [TBA]", "Natural Oak Matt", "Plywood", "Camden Board Matt", "Cascade Board Matt", "Coimbra Board Matt", "Sahara Board Matt", "Quartz Star Gray", "Quartz (Star Range)", "American Walnut", "Quartz Slab", "Quartz Stone", "Royal Mahogany", "Calacatta Quartz Slab", "Calais Board", "Catalan Postform", "Dunblane gloss board", "Capuccino Gloss"
+];
+
 
 interface CuttingItem {
   id: string;
@@ -33,6 +39,7 @@ export function MassCorrection({ items, onUpdateItems }: MassCorrectionProps) {
   const [edgingType, setEdgingType] = useState<string>("");
   const [edgingMaterial, setEdgingMaterial] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
+  const [replaceMaterial, setReplaceMaterial] = useState<string>("");
 
   const groupedItems: GroupedItems = items.reduce((acc, item) => {
     if (!acc[item.material]) {
@@ -55,6 +62,7 @@ export function MassCorrection({ items, onUpdateItems }: MassCorrectionProps) {
     if (edgingType) updates.edging = edgingType;
     if (edgingMaterial) updates.edgingMaterial = edgingMaterial;
     if (notes) updates.notes = notes;
+    if (replaceMaterial) updates.material = replaceMaterial;
 
     if (Object.keys(updates).length === 0) {
       toast.error("Please specify at least one change");
@@ -70,6 +78,7 @@ export function MassCorrection({ items, onUpdateItems }: MassCorrectionProps) {
     setEdgingType("");
     setEdgingMaterial("");
     setNotes("");
+    setReplaceMaterial("");
     setOpen(false);
   };
 
@@ -132,6 +141,17 @@ export function MassCorrection({ items, onUpdateItems }: MassCorrectionProps) {
           <div className="space-y-4 border-t pt-4">
             <h3 className="font-semibold">Apply Changes to All Items in Group:</h3>
             
+            <div className="space-y-2">
+              <Label htmlFor="replace-material">Replace Material With</Label>
+              <SmartSelect
+                value={replaceMaterial}
+                onValueChange={setReplaceMaterial}
+                placeholder="Leave unchanged..."
+                options={MATERIAL_OPTIONS}
+                category="material"
+              />
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="edging-type">Edging Type</Label>
               <Select value={edgingType} onValueChange={setEdgingType}>
