@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Wand2 } from "lucide-react";
 import { toast } from "sonner";
 import { SmartSelect } from "@/components/SmartSelect";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const MATERIAL_OPTIONS = [
   "White Melamine", "Azzano High Gloss", "Grain colored board", "Glass 4mm", "Storm grey matt", "Grigio Matt", "Laricina Melamine", "Storm grey gloss", "Masonite 2.3", "Masonite 2.4", "Postform", "PVC Board 2.4", "Black Board Matt", "Gloss white board", "Postform Large", "Caraz", "Luca polenta", "High Gloss melamine", "Plain Colored boards", "Iceberg white-Gloss", "Brookhill Matt", "Folkstone Grey Gloss", "Grigio", "Leatherwood", "Lucapolenta", "Lucaurban", "Masonite-Large", "PVC (2.4X1.2)", "PVC (2.75X1.83)", "High Gloss", "Superwood", "Congo Matt", "MDF Boards", "Shale Oak", "Black Matt", "Washed Shale", "Capuccino Board Matt", "Black Cherry board", "Harvard Cherry Board", "Granite", "Folkstone Grey Matt Board", "Calacatta Quartz", "Dunblane Grey Matt Board", "Color Board [TBA]", "Natural Oak Matt", "Plywood", "Camden Board Matt", "Cascade Board Matt", "Coimbra Board Matt", "Sahara Board Matt", "Quartz Star Gray", "Quartz (Star Range)", "American Walnut", "Quartz Slab", "Quartz Stone", "Royal Mahogany", "Calacatta Quartz Slab", "Calais Board", "Catalan Postform", "Dunblane gloss board", "Capuccino Gloss"
@@ -40,6 +41,7 @@ export function MassCorrection({ items, onUpdateItems }: MassCorrectionProps) {
   const [edgingMaterial, setEdgingMaterial] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
   const [replaceMaterial, setReplaceMaterial] = useState<string>("");
+  const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(new Set());
 
   const groupedItems: GroupedItems = items.reduce((acc, item) => {
     if (!acc[item.material]) {
@@ -52,9 +54,41 @@ export function MassCorrection({ items, onUpdateItems }: MassCorrectionProps) {
   const materials = Object.keys(groupedItems).sort();
   const selectedGroup = selectedMaterial ? groupedItems[selectedMaterial] : [];
 
+  // Auto-select all items when material changes
+  useEffect(() => {
+    if (selectedGroup.length > 0) {
+      setSelectedItemIds(new Set(selectedGroup.map(item => item.id)));
+    } else {
+      setSelectedItemIds(new Set());
+    }
+  }, [selectedMaterial]);
+
+  const toggleItemSelection = (itemId: string) => {
+    const newSet = new Set(selectedItemIds);
+    if (newSet.has(itemId)) {
+      newSet.delete(itemId);
+    } else {
+      newSet.add(itemId);
+    }
+    setSelectedItemIds(newSet);
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedItemIds.size === selectedGroup.length) {
+      setSelectedItemIds(new Set());
+    } else {
+      setSelectedItemIds(new Set(selectedGroup.map(item => item.id)));
+    }
+  };
+
   const handleApplyChanges = () => {
     if (!selectedMaterial || selectedGroup.length === 0) {
       toast.error("Please select a material group");
+      return;
+    }
+
+    if (selectedItemIds.size === 0) {
+      toast.error("Please select at least one item to update");
       return;
     }
 
@@ -69,7 +103,7 @@ export function MassCorrection({ items, onUpdateItems }: MassCorrectionProps) {
       return;
     }
 
-    const itemIds = selectedGroup.map(item => item.id);
+    const itemIds = Array.from(selectedItemIds);
     onUpdateItems(itemIds, updates);
 
     toast.success(`Updated ${itemIds.length} items in "${selectedMaterial}" group`);
@@ -79,6 +113,7 @@ export function MassCorrection({ items, onUpdateItems }: MassCorrectionProps) {
     setEdgingMaterial("");
     setNotes("");
     setReplaceMaterial("");
+    setSelectedItemIds(new Set());
     setOpen(false);
   };
 
@@ -119,19 +154,41 @@ export function MassCorrection({ items, onUpdateItems }: MassCorrectionProps) {
           {/* Preview Selected Group */}
           {selectedGroup.length > 0 && (
             <div className="rounded-lg border bg-muted/50 p-4 space-y-2">
-              <h3 className="font-semibold text-sm">Selected Group Preview:</h3>
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold text-sm">Selected Group Preview:</h3>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={toggleSelectAll}
+                >
+                  {selectedItemIds.size === selectedGroup.length ? "Deselect All" : "Select All"}
+                </Button>
+              </div>
               <div className="text-sm text-muted-foreground">
                 <p>Material: <span className="font-medium text-foreground">{selectedMaterial}</span></p>
                 <p>Total Items: <span className="font-medium text-foreground">{selectedGroup.length}</span></p>
+                <p>Selected: <span className="font-medium text-foreground">{selectedItemIds.size}</span></p>
                 <p>Total Quantity: <span className="font-medium text-foreground">
-                  {selectedGroup.reduce((sum, item) => sum + item.quantity, 0)}
+                  {selectedGroup.filter(item => selectedItemIds.has(item.id)).reduce((sum, item) => sum + item.quantity, 0)}
                 </span></p>
               </div>
-              <div className="mt-2 max-h-32 overflow-y-auto space-y-1">
+              <div className="mt-2 max-h-48 overflow-y-auto space-y-1">
                 {selectedGroup.map((item, idx) => (
-                  <div key={item.id} className="text-xs bg-background rounded px-2 py-1">
-                    #{idx + 1}: {item.length}×{item.width} mm, Qty: {item.quantity}, Edging: {item.edging}
-                  </div>
+                  <label 
+                    key={item.id} 
+                    className="flex items-start gap-2 text-xs bg-background rounded px-2 py-2 cursor-pointer hover:bg-accent transition-colors"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedItemIds.has(item.id)}
+                      onChange={() => toggleItemSelection(item.id)}
+                      className="mt-0.5 cursor-pointer"
+                    />
+                    <span className="flex-1">
+                      #{idx + 1}: {item.length}×{item.width} mm, Qty: {item.quantity}, Edging: {item.edging}
+                    </span>
+                  </label>
                 ))}
               </div>
             </div>
@@ -201,8 +258,8 @@ export function MassCorrection({ items, onUpdateItems }: MassCorrectionProps) {
             <Button variant="outline" onClick={() => setOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleApplyChanges} disabled={!selectedMaterial}>
-              Apply to {selectedGroup.length} Items
+            <Button onClick={handleApplyChanges} disabled={!selectedMaterial || selectedItemIds.size === 0}>
+              Apply to {selectedItemIds.size} Selected Item{selectedItemIds.size !== 1 ? 's' : ''}
             </Button>
           </div>
         </div>
