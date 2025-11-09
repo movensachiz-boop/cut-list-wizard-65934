@@ -13,6 +13,7 @@ import { HeroSection } from "@/components/HeroSection";
 import { ImageAnalysisSection } from "@/components/ImageAnalysisSection";
 import { SaveCuttingList } from "@/components/SaveCuttingList";
 import { LoadCuttingList } from "@/components/LoadCuttingList";
+import { MassCorrection } from "@/components/MassCorrection";
 import { AIAssistant } from "@/components/AIAssistant";
 import { BibleVerseSlider } from "@/components/BibleVerseSlider";
 import { SheetOptimization } from "@/components/SheetOptimization";
@@ -133,6 +134,13 @@ const Index = () => {
       description: "Item deleted from cutting list"
     });
   };
+
+  const handleUpdateMultipleItems = (itemIds: string[], updates: Partial<CuttingItem>) => {
+    setItems(items.map(item => 
+      itemIds.includes(item.id) ? { ...item, ...updates } : item
+    ));
+  };
+
   const exportToCSV = () => {
     // MaxCut CSV format
     let csv = 'Sep=,\n';
@@ -552,6 +560,7 @@ const Index = () => {
                 });
               }}
             />
+            <MassCorrection items={items} onUpdateItems={handleUpdateMultipleItems} />
           </div>
         </div>
 
