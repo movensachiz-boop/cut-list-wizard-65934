@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -61,6 +61,60 @@ const Index = () => {
   } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+  const isAutoCorrectingRef = useRef(false);
+
+  // Auto-edging logic: Apply "1 Long" to melamine/colorboard items
+  useEffect(() => {
+    // Prevent infinite loops
+    if (isAutoCorrectingRef.current || items.length === 0) return;
+
+    // Group items by material
+    const materialGroups = new Map<string, CuttingItem[]>();
+    items.forEach(item => {
+      const existing = materialGroups.get(item.material) || [];
+      materialGroups.set(item.material, [...existing, item]);
+    });
+
+    const updatedItems: CuttingItem[] = [];
+    let hasChanges = false;
+
+    materialGroups.forEach((groupItems, material) => {
+      const materialLower = material.toLowerCase();
+      
+      // Check if this material should have auto-edging
+      const shouldAutoEdge = 
+        (materialLower.includes('melamine') || materialLower.includes('colorboard')) &&
+        !materialLower.includes('superwood') &&
+        !materialLower.includes('masonite') &&
+        !materialLower.includes('quartz');
+
+      if (!shouldAutoEdge) {
+        updatedItems.push(...groupItems);
+        return;
+      }
+
+      // Check if any items in this group already have "1 Long" edging
+      const hasExplicit1L = groupItems.some(item => item.edging === "1 Long");
+
+      groupItems.forEach(item => {
+        // If no items have 1L and this item has no edging, apply 1L
+        if (!hasExplicit1L && (item.edging === "None" || !item.edging)) {
+          updatedItems.push({ ...item, edging: "1 Long" });
+          hasChanges = true;
+        } else {
+          updatedItems.push(item);
+        }
+      });
+    });
+
+    if (hasChanges) {
+      isAutoCorrectingRef.current = true;
+      setItems(updatedItems);
+      setTimeout(() => {
+        isAutoCorrectingRef.current = false;
+      }, 100);
+    }
+  }, [items]);
   
   useEffect(() => {
     const handlePaste = (e: ClipboardEvent) => {
