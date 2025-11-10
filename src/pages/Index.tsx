@@ -69,9 +69,10 @@ const Index = () => {
     if (isAutoCorrectingRef.current || !items || !Array.isArray(items) || items.length === 0) return;
 
     try {
-      // Group items by material
+      // Group items by material with defensive checks
       const materialGroups = new Map<string, CuttingItem[]>();
       items.forEach(item => {
+        if (!item || !item.material) return; // Skip invalid items
         const existing = materialGroups.get(item.material) || [];
         materialGroups.set(item.material, [...existing, item]);
       });
@@ -80,6 +81,11 @@ const Index = () => {
       let hasChanges = false;
 
       materialGroups.forEach((groupItems, material) => {
+        // Defensive checks
+        if (!groupItems || !Array.isArray(groupItems) || groupItems.length === 0 || !material) {
+          return;
+        }
+        
         const materialLower = material.toLowerCase();
         
         // Check if this material should have auto-edging
@@ -95,9 +101,11 @@ const Index = () => {
         }
 
         // Check if any items in this group already have "1 Long" edging
-        const hasExplicit1L = groupItems.some(item => item.edging === "1 Long");
+        const hasExplicit1L = groupItems.some(item => item && item.edging === "1 Long");
 
         groupItems.forEach(item => {
+          if (!item) return; // Skip invalid items
+          
           // If no items have 1L and this item has no edging, apply 1L
           if (!hasExplicit1L && (item.edging === "None" || !item.edging)) {
             updatedItems.push({ ...item, edging: "1 Long" });
@@ -230,7 +238,7 @@ const Index = () => {
       // Re-enable auto-correction after a delay
       setTimeout(() => {
         isAutoCorrectingRef.current = false;
-      }, 500);
+      }, 1000);
       
       toast({
         title: "Items updated",
