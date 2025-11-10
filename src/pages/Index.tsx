@@ -202,9 +202,13 @@ const Index = () => {
   };
 
   const handleUpdateMultipleItems = (itemIds: string[], updates: Partial<CuttingItem>) => {
-    setItems(items.map(item => 
+    setItems(prevItems => prevItems.map(item => 
       itemIds.includes(item.id) ? { ...item, ...updates } : item
     ));
+    toast({
+      title: "Items updated",
+      description: `Successfully updated ${itemIds.length} item${itemIds.length !== 1 ? 's' : ''}`
+    });
   };
 
   const exportToCSV = () => {
