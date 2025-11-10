@@ -142,6 +142,7 @@ const Index = () => {
     width: number;
     quantity: number;
     edgingMaterial?: string;
+    notes?: string;
   } | null => {
     // Support formats like: 300X400X2, 300x400x2, 300*400*2
     const regex = /(\d+)\s*[xX*]\s*(\d+)\s*[xX*]\s*(\d+)/;
@@ -150,11 +151,15 @@ const Index = () => {
       // Check if "32mm" is mentioned in the input
       const has32mm = /32mm/i.test(input);
       
+      // Check if "groove" is mentioned in the input
+      const hasGroove = /groove/i.test(input);
+      
       return {
         length: parseInt(match[1]),
         width: parseInt(match[2]),
         quantity: parseInt(match[3]),
-        edgingMaterial: has32mm ? "32mm Edging" : undefined
+        edgingMaterial: has32mm ? "32mm Edging" : undefined,
+        notes: hasGroove ? "groove" : undefined
       };
     }
     return null;
@@ -177,7 +182,7 @@ const Index = () => {
       material,
       edging,
       edgingMaterial: parsed.edgingMaterial || edgingMaterial,
-      notes
+      notes: parsed.notes || notes
     };
     setItems([...items, newItem]);
     setLastBatchSize(1);
@@ -278,7 +283,7 @@ const Index = () => {
           material: bulkMaterial,
           edging: bulkEdging,
           edgingMaterial: parsed.edgingMaterial || bulkEdgingMaterial,
-          notes
+          notes: parsed.notes || notes
         });
         successCount++;
       } else {
@@ -431,6 +436,11 @@ const Index = () => {
             itemEdgingMaterial = parsed.edgingMaterial;
           }
           
+          // Build notes: start with parsed notes if available, then append image info
+          let itemNotes = parsed?.notes || "";
+          const imageNote = `From image${confidenceNote}`;
+          itemNotes = itemNotes ? `${itemNotes}, ${imageNote}` : imageNote;
+          
           return {
             id: `${Date.now()}-${Math.random()}`,
             length: parsed!.length,
@@ -439,7 +449,7 @@ const Index = () => {
             material: itemMaterial,
             edging: itemEdging,
             edgingMaterial: itemEdgingMaterial,
-            notes: `From image${confidenceNote}`,
+            notes: itemNotes,
             confidence: dim.confidence as "high" | "medium" | "low"
           };
         });
