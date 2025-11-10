@@ -217,6 +217,9 @@ const Index = () => {
   const handleUpdateMultipleItems = (itemIds: string[], updates: Partial<CuttingItem>) => {
     console.log("handleUpdateMultipleItems called with:", { itemIds, updates });
     
+    // Disable auto-edging completely during mass updates
+    isAutoCorrectingRef.current = true;
+    
     // Use the same pattern as bulk edit - simple and direct
     setItems(items.map(item => {
       if (itemIds.includes(item.id)) {
@@ -227,6 +230,11 @@ const Index = () => {
       }
       return item;
     }));
+    
+    // Re-enable auto-edging after a longer delay
+    setTimeout(() => {
+      isAutoCorrectingRef.current = false;
+    }, 2000);
     
     toast({
       title: "Items updated",
