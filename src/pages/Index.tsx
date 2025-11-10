@@ -207,22 +207,37 @@ const Index = () => {
   };
 
   const handleUpdateMultipleItems = (itemIds: string[], updates: Partial<CuttingItem>) => {
-    // Temporarily disable auto-correction during mass updates
-    isAutoCorrectingRef.current = true;
-    
-    setItems(prevItems => prevItems.map(item => 
-      itemIds.includes(item.id) ? { ...item, ...updates } : item
-    ));
-    
-    // Re-enable auto-correction after a delay
-    setTimeout(() => {
-      isAutoCorrectingRef.current = false;
-    }, 200);
-    
-    toast({
-      title: "Items updated",
-      description: `Successfully updated ${itemIds.length} item${itemIds.length !== 1 ? 's' : ''}`
-    });
+    try {
+      console.log("handleUpdateMultipleItems called with:", { itemIds, updates });
+      
+      // Temporarily disable auto-correction during mass updates
+      isAutoCorrectingRef.current = true;
+      
+      setItems(prevItems => {
+        const newItems = prevItems.map(item => 
+          itemIds.includes(item.id) ? { ...item, ...updates } : item
+        );
+        console.log("Updated items:", newItems);
+        return newItems;
+      });
+      
+      // Re-enable auto-correction after a delay
+      setTimeout(() => {
+        isAutoCorrectingRef.current = false;
+      }, 200);
+      
+      toast({
+        title: "Items updated",
+        description: `Successfully updated ${itemIds.length} item${itemIds.length !== 1 ? 's' : ''}`
+      });
+    } catch (error) {
+      console.error("Error in handleUpdateMultipleItems:", error);
+      toast({
+        title: "Update failed",
+        description: "Failed to update items. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   const exportToCSV = () => {

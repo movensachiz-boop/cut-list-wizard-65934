@@ -85,39 +85,46 @@ export function MassCorrection({ items, onUpdateItems }: MassCorrectionProps) {
   };
 
   const handleApplyChanges = () => {
-    if (!selectedMaterial || selectedGroup.length === 0) {
-      toast.error("Please select a material group");
-      return;
+    try {
+      if (!selectedMaterial || selectedGroup.length === 0) {
+        toast.error("Please select a material group");
+        return;
+      }
+
+      if (selectedItemIds.size === 0) {
+        toast.error("Please select at least one item to update");
+        return;
+      }
+
+      const updates: Partial<CuttingItem> = {};
+      if (edgingType) updates.edging = edgingType;
+      if (edgingMaterial) updates.edgingMaterial = edgingMaterial;
+      if (notes) updates.notes = notes;
+      if (replaceMaterial) updates.material = replaceMaterial;
+
+      if (Object.keys(updates).length === 0) {
+        toast.error("Please specify at least one change");
+        return;
+      }
+
+      console.log("Applying updates:", updates, "to items:", Array.from(selectedItemIds));
+      
+      const itemIds = Array.from(selectedItemIds);
+      onUpdateItems(itemIds, updates);
+
+      toast.success(`Updated ${itemIds.length} items in "${selectedMaterial}" group`);
+      
+      // Reset form
+      setEdgingType("");
+      setEdgingMaterial("");
+      setNotes("");
+      setReplaceMaterial("");
+      setSelectedItemIds(new Set());
+      setOpen(false);
+    } catch (error) {
+      console.error("Error applying mass correction:", error);
+      toast.error("Failed to apply changes. Please try again.");
     }
-
-    if (selectedItemIds.size === 0) {
-      toast.error("Please select at least one item to update");
-      return;
-    }
-
-    const updates: Partial<CuttingItem> = {};
-    if (edgingType) updates.edging = edgingType;
-    if (edgingMaterial) updates.edgingMaterial = edgingMaterial;
-    if (notes) updates.notes = notes;
-    if (replaceMaterial) updates.material = replaceMaterial;
-
-    if (Object.keys(updates).length === 0) {
-      toast.error("Please specify at least one change");
-      return;
-    }
-
-    const itemIds = Array.from(selectedItemIds);
-    onUpdateItems(itemIds, updates);
-
-    toast.success(`Updated ${itemIds.length} items in "${selectedMaterial}" group`);
-    
-    // Reset form
-    setEdgingType("");
-    setEdgingMaterial("");
-    setNotes("");
-    setReplaceMaterial("");
-    setSelectedItemIds(new Set());
-    setOpen(false);
   };
 
   return (
