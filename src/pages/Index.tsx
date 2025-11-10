@@ -141,15 +141,20 @@ const Index = () => {
     length: number;
     width: number;
     quantity: number;
+    edgingMaterial?: string;
   } | null => {
     // Support formats like: 300X400X2, 300x400x2, 300*400*2
     const regex = /(\d+)\s*[xX*]\s*(\d+)\s*[xX*]\s*(\d+)/;
     const match = input.match(regex);
     if (match) {
+      // Check if "32mm" is mentioned in the input
+      const has32mm = /32mm/i.test(input);
+      
       return {
         length: parseInt(match[1]),
         width: parseInt(match[2]),
-        quantity: parseInt(match[3])
+        quantity: parseInt(match[3]),
+        edgingMaterial: has32mm ? "32mm Edging" : undefined
       };
     }
     return null;
@@ -166,10 +171,12 @@ const Index = () => {
     }
     const newItem: CuttingItem = {
       id: Date.now().toString(),
-      ...parsed,
+      length: parsed.length,
+      width: parsed.width,
+      quantity: parsed.quantity,
       material,
       edging,
-      edgingMaterial,
+      edgingMaterial: parsed.edgingMaterial || edgingMaterial,
       notes
     };
     setItems([...items, newItem]);
@@ -265,10 +272,12 @@ const Index = () => {
       if (parsed) {
         newItems.push({
           id: `${Date.now()}-${Math.random()}`,
-          ...parsed,
-          material,
-          edging,
-          edgingMaterial,
+          length: parsed.length,
+          width: parsed.width,
+          quantity: parsed.quantity,
+          material: bulkMaterial,
+          edging: bulkEdging,
+          edgingMaterial: parsed.edgingMaterial || bulkEdgingMaterial,
           notes
         });
         successCount++;
@@ -417,9 +426,16 @@ const Index = () => {
             itemEdgingMaterial = "Colour Edging";
           }
           
+          // Use parsed edging material if 32mm was detected
+          if (parsed?.edgingMaterial) {
+            itemEdgingMaterial = parsed.edgingMaterial;
+          }
+          
           return {
             id: `${Date.now()}-${Math.random()}`,
-            ...parsed!,
+            length: parsed!.length,
+            width: parsed!.width,
+            quantity: parsed!.quantity,
             material: itemMaterial,
             edging: itemEdging,
             edgingMaterial: itemEdgingMaterial,
