@@ -303,7 +303,7 @@ const Index = () => {
     document.body.removeChild(link);
     toast({
       title: "Export successful",
-      description: `${items.length} items exported to GROX CUT CSV format`
+      description: `${items?.length || 0} items exported to GROX CUT CSV format`
     });
   };
   const addBulkItems = () => {
@@ -566,7 +566,7 @@ const Index = () => {
     });
   };
   const undoLast = () => {
-    if (lastBatchSize === 0 || items.length === 0) {
+    if (!items || !Array.isArray(items) || lastBatchSize === 0 || items.length === 0) {
       toast({
         title: "Nothing to undo",
         description: "No recent additions to remove",
@@ -584,6 +584,7 @@ const Index = () => {
     });
   };
   const toggleSelectAll = () => {
+    if (!items || !Array.isArray(items)) return;
     if (selectedItems.size === items.length) {
       setSelectedItems(new Set());
     } else {
@@ -774,10 +775,10 @@ const Index = () => {
         </Card>
 
         {/* Cutting List Table */}
-        {items.length > 0 && <Card className="p-8 border-2 border-primary/20 glass-effect animate-fade-in-up">
+        {items && Array.isArray(items) && items.length > 0 && <Card className="p-8 border-2 border-primary/20 glass-effect animate-fade-in-up">
             <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-6 gap-4">
               <h2 className="text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-                📋 Cutting List <span className="text-2xl">({items.length})</span>
+                📋 Cutting List <span className="text-2xl">({items?.length || 0})</span>
                 {selectedItems.size > 0 && <span className="ml-2 text-lg font-normal text-muted-foreground">
                     ({selectedItems.size} selected)
                   </span>}
@@ -1075,14 +1076,14 @@ const Index = () => {
             </div>
           </Card>}
 
-        {items.length === 0 && <Card className="p-12 text-center">
+        {(!items || !Array.isArray(items) || items.length === 0) && <Card className="p-12 text-center">
             <p className="text-muted-foreground text-lg">
               No items in cutting list. Start by adding dimensions above.
             </p>
           </Card>}
 
         {/* Hardware Selection Section */}
-        {items.length > 0 && (
+        {items && Array.isArray(items) && items.length > 0 && (
           <div className="mt-10">
             <Button 
               onClick={() => setShowHardwareSelector(!showHardwareSelector)}
@@ -1123,7 +1124,7 @@ const Index = () => {
         )}
 
         {/* Sheet Optimization Section */}
-        {items.length > 0 && (
+        {items && Array.isArray(items) && items.length > 0 && (
           <div className="mt-10">
             <SheetOptimization cuttingItems={items} />
           </div>
