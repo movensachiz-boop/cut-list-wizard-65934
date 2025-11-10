@@ -65,8 +65,8 @@ const Index = () => {
 
   // Auto-edging logic: Apply "1 Long" to melamine/colorboard items
   useEffect(() => {
-    // Prevent infinite loops
-    if (isAutoCorrectingRef.current || items.length === 0) return;
+    // Prevent infinite loops and validate items
+    if (isAutoCorrectingRef.current || !items || !Array.isArray(items) || items.length === 0) return;
 
     try {
       // Group items by material
@@ -214,6 +214,12 @@ const Index = () => {
       isAutoCorrectingRef.current = true;
       
       setItems(prevItems => {
+        // Defensive check to ensure prevItems is valid
+        if (!prevItems || !Array.isArray(prevItems)) {
+          console.error("Invalid prevItems state:", prevItems);
+          return prevItems || [];
+        }
+        
         const newItems = prevItems.map(item => 
           itemIds.includes(item.id) ? { ...item, ...updates } : item
         );
@@ -224,7 +230,7 @@ const Index = () => {
       // Re-enable auto-correction after a delay
       setTimeout(() => {
         isAutoCorrectingRef.current = false;
-      }, 200);
+      }, 500);
       
       toast({
         title: "Items updated",
@@ -936,7 +942,7 @@ const Index = () => {
                 <thead>
                   <tr className="border-b-2 border-border">
                     <th className="text-left p-3">
-                      <Checkbox checked={selectedItems.size === items.length && items.length > 0} onCheckedChange={toggleSelectAll} />
+                      <Checkbox checked={items && Array.isArray(items) && selectedItems.size === items.length && items.length > 0} onCheckedChange={toggleSelectAll} />
                     </th>
                     <th className="text-left p-3 font-semibold text-foreground">#</th>
                     <th className="text-left p-3 font-semibold text-foreground">Length (mm)</th>
@@ -950,7 +956,7 @@ const Index = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {items.map((item, index) => <tr key={item.id} className={`border-b border-border hover:bg-muted/50 transition-colors ${item.confidence === "low" || item.confidence === "medium" ? "bg-yellow-50 dark:bg-yellow-950/20" : ""} ${selectedItems.has(item.id) ? "bg-primary/10" : ""}`}>
+                  {items && Array.isArray(items) && items.map((item, index) => <tr key={item.id} className={`border-b border-border hover:bg-muted/50 transition-colors ${item.confidence === "low" || item.confidence === "medium" ? "bg-yellow-50 dark:bg-yellow-950/20" : ""} ${selectedItems.has(item.id) ? "bg-primary/10" : ""}`}>
                       <td className="p-3">
                         <Checkbox checked={selectedItems.has(item.id)} onCheckedChange={() => toggleSelectItem(item.id)} />
                       </td>
