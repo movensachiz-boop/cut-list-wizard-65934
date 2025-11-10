@@ -43,7 +43,7 @@ const Index = () => {
   const [items, setItems] = useState<CuttingItem[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [bulkInput, setBulkInput] = useState("");
-  const [material, setMaterial] = useState("Superwood");
+  const [material, setMaterial] = useState("White Melamine");
   const [edging, setEdging] = useState("None");
   const [edgingMaterial, setEdgingMaterial] = useState("White Edging");
   const [notes, setNotes] = useState("");
@@ -51,7 +51,7 @@ const Index = () => {
   const [analysisProgress, setAnalysisProgress] = useState(0);
   const [lastBatchSize, setLastBatchSize] = useState(0);
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
-  const [bulkMaterial, setBulkMaterial] = useState("Superwood");
+  const [bulkMaterial, setBulkMaterial] = useState("White Melamine");
   const [bulkEdging, setBulkEdging] = useState("None");
   const [bulkEdgingMaterial, setBulkEdgingMaterial] = useState("White Edging");
   const [currentCuttingListId, setCurrentCuttingListId] = useState<string | null>(null);
