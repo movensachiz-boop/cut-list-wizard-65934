@@ -63,16 +63,16 @@ const Index = () => {
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const isAutoCorrectingRef = useRef(false);
 
-  // Auto-edging logic: Apply "1 Long" to melamine/colorboard items
-  useEffect(() => {
-    // Prevent infinite loops and validate items
-    if (isAutoCorrectingRef.current || !items || !Array.isArray(items) || items.length === 0) return;
+  // Auto-edging function - call this explicitly when needed, not in useEffect
+  const applyAutoEdging = useCallback((itemsToProcess: CuttingItem[]) => {
+    if (!itemsToProcess || !Array.isArray(itemsToProcess) || itemsToProcess.length === 0) {
+      return itemsToProcess;
+    }
 
     try {
-      // Group items by material with defensive checks
       const materialGroups = new Map<string, CuttingItem[]>();
-      items.forEach(item => {
-        if (!item || !item.material) return; // Skip invalid items
+      itemsToProcess.forEach(item => {
+        if (!item || !item.material) return;
         const existing = materialGroups.get(item.material) || [];
         materialGroups.set(item.material, [...existing, item]);
       });
@@ -81,14 +81,11 @@ const Index = () => {
       let hasChanges = false;
 
       materialGroups.forEach((groupItems, material) => {
-        // Defensive checks
         if (!groupItems || !Array.isArray(groupItems) || groupItems.length === 0 || !material) {
           return;
         }
         
         const materialLower = material.toLowerCase();
-        
-        // Check if this material should have auto-edging
         const shouldAutoEdge = 
           (materialLower.includes('melamine') || materialLower.includes('colorboard')) &&
           !materialLower.includes('superwood') &&
@@ -100,13 +97,11 @@ const Index = () => {
           return;
         }
 
-        // Check if any items in this group already have "1 Long" edging
         const hasExplicit1L = groupItems.some(item => item && item.edging === "1 Long");
 
         groupItems.forEach(item => {
-          if (!item) return; // Skip invalid items
+          if (!item) return;
           
-          // If no items have 1L and this item has no edging, apply 1L
           if (!hasExplicit1L && (item.edging === "None" || !item.edging)) {
             updatedItems.push({ ...item, edging: "1 Long" });
             hasChanges = true;
@@ -116,18 +111,12 @@ const Index = () => {
         });
       });
 
-      if (hasChanges) {
-        isAutoCorrectingRef.current = true;
-        setItems(updatedItems);
-        setTimeout(() => {
-          isAutoCorrectingRef.current = false;
-        }, 100);
-      }
+      return hasChanges ? updatedItems : itemsToProcess;
     } catch (error) {
       console.error("Error in auto-edging logic:", error);
-      isAutoCorrectingRef.current = false;
+      return itemsToProcess;
     }
-  }, [items]);
+  }, []);
   
   useEffect(() => {
     const handlePaste = (e: ClipboardEvent) => {
@@ -197,7 +186,8 @@ const Index = () => {
       edgingMaterial: parsed.edgingMaterial || edgingMaterial,
       notes: parsed.notes || notes
     };
-    setItems([...items, newItem]);
+    const updatedList = applyAutoEdging([...items, newItem]);
+    setItems(updatedList);
     setLastBatchSize(1);
     setInputValue("");
     setNotes("");
@@ -217,10 +207,7 @@ const Index = () => {
   const handleUpdateMultipleItems = (itemIds: string[], updates: Partial<CuttingItem>) => {
     console.log("handleUpdateMultipleItems called with:", { itemIds, updates });
     
-    // Disable auto-edging completely during mass updates
-    isAutoCorrectingRef.current = true;
-    
-    // Use the same pattern as bulk edit - simple and direct
+    // Simple direct update - NO auto-edging for mass corrections
     setItems(items.map(item => {
       if (itemIds.includes(item.id)) {
         return {
@@ -230,11 +217,6 @@ const Index = () => {
       }
       return item;
     }));
-    
-    // Re-enable auto-edging after a longer delay
-    setTimeout(() => {
-      isAutoCorrectingRef.current = false;
-    }, 2000);
     
     toast({
       title: "Items updated",
@@ -326,7 +308,8 @@ const Index = () => {
       }
     });
     if (newItems.length > 0) {
-      setItems([...items, ...newItems]);
+      const updatedList = applyAutoEdging([...items, ...newItems]);
+      setItems(updatedList);
       setLastBatchSize(newItems.length);
       setBulkInput("");
       setNotes("");
