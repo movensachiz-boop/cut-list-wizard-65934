@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
+import { Loader2, AlertCircle } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export const AuthForm = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -13,7 +14,29 @@ export const AuthForm = () => {
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [userCount, setUserCount] = useState<number | null>(null);
+  const [checkingLimit, setCheckingLimit] = useState(false);
   const { toast } = useToast();
+
+  // Check user count when switching to signup mode
+  useEffect(() => {
+    if (!isLogin) {
+      checkUserLimit();
+    }
+  }, [isLogin]);
+
+  const checkUserLimit = async () => {
+    setCheckingLimit(true);
+    try {
+      const { data, error } = await supabase.rpc('get_user_count');
+      if (error) throw error;
+      setUserCount(data);
+    } catch (error) {
+      console.error('Error checking user limit:', error);
+    } finally {
+      setCheckingLimit(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,9 +64,13 @@ export const AuthForm = () => {
         toast({ title: "Account created! Please check your email." });
       }
     } catch (error: any) {
+      const errorMessage = error.message.includes('User registration limit reached')
+        ? 'Registration is currently full. Maximum 10 users allowed.'
+        : error.message;
+      
       toast({
         title: "Error",
-        description: error.message,
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -51,16 +78,35 @@ export const AuthForm = () => {
     }
   };
 
+  const isRegistrationFull = userCount !== null && userCount >= 10;
+
   return (
     <Card className="w-full max-w-md mx-auto">
       <CardHeader>
         <CardTitle>{isLogin ? "Sign In" : "Sign Up"}</CardTitle>
         <CardDescription>
-          {isLogin ? "Welcome back!" : "Create your account"}
+          {isLogin ? "Welcome back!" : isRegistrationFull ? "Registration Full" : "Create your account"}
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        {!isLogin && isRegistrationFull && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Registration Limit Reached</AlertTitle>
+            <AlertDescription>
+              We've reached our maximum capacity of 10 users. Please contact the administrator for access.
+            </AlertDescription>
+          </Alert>
+        )}
+        
+        {checkingLimit && !isLogin && (
+          <div className="flex items-center justify-center py-4">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        )}
+        
+        {(!checkingLimit || isLogin) && (
+          <form onSubmit={handleSubmit} className="space-y-4">
           {!isLogin && (
             <div className="space-y-2">
               <Label htmlFor="fullName">Full Name</Label>
@@ -93,7 +139,11 @@ export const AuthForm = () => {
               minLength={6}
             />
           </div>
-          <Button type="submit" className="w-full" disabled={loading}>
+          <Button 
+            type="submit" 
+            className="w-full" 
+            disabled={loading || (!isLogin && isRegistrationFull)}
+          >
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {isLogin ? "Sign In" : "Sign Up"}
           </Button>
@@ -106,6 +156,7 @@ export const AuthForm = () => {
             {isLogin ? "Need an account? Sign up" : "Have an account? Sign in"}
           </Button>
         </form>
+        )}
       </CardContent>
     </Card>
   );
