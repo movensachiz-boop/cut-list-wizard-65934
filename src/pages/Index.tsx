@@ -627,9 +627,19 @@ const Index = () => {
     setSelectedItems(new Set());
   };
 
-  return <div className="min-h-screen bg-background p-4 md:p-8">
-      <BibleVerseSlider />
-      <div className="max-w-7xl mx-auto pt-12">
+  return <div 
+      className="min-h-screen p-4 md:p-8 relative"
+      style={{
+        backgroundImage: 'url(/matrix-bg.jpg)',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundAttachment: 'fixed'
+      }}
+    >
+      <div className="absolute inset-0 bg-background/90 backdrop-blur-sm" />
+      <div className="relative z-10">
+        <BibleVerseSlider />
+        <div className="max-w-7xl mx-auto pt-12">
         {/* Header with actions */}
         <div className="flex justify-between items-center mb-8 animate-fade-in">
           <div>
@@ -1133,6 +1143,7 @@ const Index = () => {
         {/* Footer Credit */}
         <div className="mt-8 text-center">
           <p className="text-sm text-muted-foreground">Assistance 0786133259</p>
+        </div>
         </div>
       </div>
     </div>;
