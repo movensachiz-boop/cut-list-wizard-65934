@@ -61,7 +61,7 @@ export const AuthForm = () => {
           },
         });
         if (error) throw error;
-        toast({ title: "Account created! Please check your email." });
+        toast({ title: "Account created successfully!" });
       }
     } catch (error: any) {
       const errorMessage = error.message.includes('User registration limit reached')
