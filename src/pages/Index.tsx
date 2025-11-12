@@ -63,7 +63,7 @@ const Index = () => {
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const isAutoCorrectingRef = useRef(false);
 
-  // Auto-edging function - call this explicitly when needed, not in useEffect
+  // Auto-edging function
   const applyAutoEdging = useCallback((itemsToProcess: CuttingItem[]) => {
     if (!itemsToProcess || !Array.isArray(itemsToProcess) || itemsToProcess.length === 0) {
       return itemsToProcess;
@@ -117,6 +117,28 @@ const Index = () => {
       return itemsToProcess;
     }
   }, []);
+
+  // Apply auto-edging automatically when items change (but not during mass corrections)
+  useEffect(() => {
+    if (isAutoCorrectingRef.current || !items || items.length === 0) return;
+    
+    const processedItems = applyAutoEdging(items);
+    
+    // Only update if something actually changed
+    if (processedItems !== items) {
+      const itemsChanged = processedItems.some((item, index) => 
+        !items[index] || item.edging !== items[index].edging
+      );
+      
+      if (itemsChanged) {
+        isAutoCorrectingRef.current = true;
+        setItems(processedItems);
+        setTimeout(() => {
+          isAutoCorrectingRef.current = false;
+        }, 100);
+      }
+    }
+  }, [items, applyAutoEdging]);
   
   useEffect(() => {
     const handlePaste = (e: ClipboardEvent) => {
@@ -186,8 +208,7 @@ const Index = () => {
       edgingMaterial: parsed.edgingMaterial || edgingMaterial,
       notes: parsed.notes || notes
     };
-    const updatedList = applyAutoEdging([...items, newItem]);
-    setItems(updatedList);
+    setItems([...items, newItem]);
     setLastBatchSize(1);
     setInputValue("");
     setNotes("");
@@ -207,7 +228,9 @@ const Index = () => {
   const handleUpdateMultipleItems = (itemIds: string[], updates: Partial<CuttingItem>) => {
     console.log("handleUpdateMultipleItems called with:", { itemIds, updates });
     
-    // Simple direct update - NO auto-edging for mass corrections
+    // Disable auto-edging during mass corrections
+    isAutoCorrectingRef.current = true;
+    
     setItems(items.map(item => {
       if (itemIds.includes(item.id)) {
         return {
@@ -217,6 +240,11 @@ const Index = () => {
       }
       return item;
     }));
+    
+    // Re-enable after update completes
+    setTimeout(() => {
+      isAutoCorrectingRef.current = false;
+    }, 500);
     
     toast({
       title: "Items updated",
@@ -308,8 +336,7 @@ const Index = () => {
       }
     });
     if (newItems.length > 0) {
-      const updatedList = applyAutoEdging([...items, ...newItems]);
-      setItems(updatedList);
+      setItems([...items, ...newItems]);
       setLastBatchSize(newItems.length);
       setBulkInput("");
       setNotes("");
