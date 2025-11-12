@@ -5,10 +5,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Trash2, Download, Plus, List, AlertTriangle, LogOut } from "lucide-react";
+import { Trash2, Download, Plus, List, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
 import { SmartSelect } from "@/components/SmartSelect";
 import { HeroSection } from "@/components/HeroSection";
 import { ImageAnalysisSection } from "@/components/ImageAnalysisSection";
@@ -41,7 +40,6 @@ interface CuttingItem {
   confidence?: "high" | "medium" | "low";
 }
 const Index = () => {
-  const navigate = useNavigate();
   const [items, setItems] = useState<CuttingItem[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [bulkInput, setBulkInput] = useState("");
@@ -58,44 +56,12 @@ const Index = () => {
   const [bulkEdgingMaterial, setBulkEdgingMaterial] = useState("White Edging");
   const [currentCuttingListId, setCurrentCuttingListId] = useState<string | null>(null);
   const [showHardwareSelector, setShowHardwareSelector] = useState(false);
-  const [loading, setLoading] = useState(true);
   const {
     toast
   } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const isAutoCorrectingRef = useRef(false);
-
-  // Check authentication
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) {
-        navigate("/auth");
-      }
-      setLoading(false);
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (!session) {
-        navigate("/auth");
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, [navigate]);
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    navigate("/auth");
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
 
   // Auto-edging function
   const applyAutoEdging = useCallback((itemsToProcess: CuttingItem[]) => {
@@ -733,15 +699,6 @@ const Index = () => {
               }}
             />
             <MassCorrection items={items} onUpdateItems={handleUpdateMultipleItems} />
-            <Button
-              onClick={handleLogout}
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-2"
-            >
-              <LogOut className="w-4 h-4" />
-              Logout
-            </Button>
           </div>
         </div>
 
