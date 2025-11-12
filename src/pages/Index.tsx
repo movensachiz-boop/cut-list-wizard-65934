@@ -241,10 +241,12 @@ const Index = () => {
       return item;
     }));
     
-    // Re-enable after update completes
+    // Scale delay based on number of items updated (more items = longer delay)
+    const delay = Math.min(3000, 1000 + (itemIds.length * 50));
+    
     setTimeout(() => {
       isAutoCorrectingRef.current = false;
-    }, 500);
+    }, delay);
     
     toast({
       title: "Items updated",
