@@ -78,6 +78,19 @@ You can help users with:
   * Edging material will be "Gloss"
 - Only include edging parameters when user explicitly specifies edging type (e.g., "All Round", "2 Long", etc.)
 
+**COLORBOARD MATERIAL DETECTION**:
+- When user mentions just "color" or "colorboard" without specifying a specific color → set material to "Colorboard TBA"
+- When user mentions a specific color name (red, blue, white, black, green, yellow, grey, etc.) → automatically detect and set material to that specific colorboard
+- Common colorboard patterns:
+  * "red" or "Red" → "Red Colorboard"
+  * "blue" or "Blue" → "Blue Colorboard"
+  * "white" or "White" → "White Colorboard"
+  * "black" or "Black" → "Black Colorboard"
+  * "green" or "Green" → "Green Colorboard"
+  * "grey" or "Gray" → "Grey Colorboard"
+  * "yellow" or "Yellow" → "Yellow Colorboard"
+- This applies when colors are mentioned in the context of materials, not when describing other things
+
 When answering:
 - Be friendly, conversational, and helpful
 - Provide clear, step-by-step guidance when explaining how to use features
@@ -218,21 +231,39 @@ When answering:
     console.log('Message:', JSON.stringify(message, null, 2));
     console.log('Tool calls:', message.tool_calls);
 
-    // Process tool calls - only handle gloss material normalization
+    // Process tool calls - handle material normalization
     const processedToolCalls = message.tool_calls?.map((toolCall: any) => {
       if (toolCall.function.name === 'add_cutting_item' || toolCall.function.name === 'update_cutting_item') {
         const args = JSON.parse(toolCall.function.arguments);
         
-        // Only normalize gloss materials to "High Gloss" - don't add any edging defaults here
         if (args.material) {
           const materialLower = args.material.toLowerCase();
           
+          // Normalize gloss materials
           if (materialLower.includes('gloss')) {
             args.material = 'High Gloss';
-            // Only set edging material to Gloss if not already specified
             if (!args.edgingMaterial) {
               args.edgingMaterial = 'Gloss';
             }
+          }
+          
+          // Normalize colorboard materials
+          if (materialLower === 'color' || materialLower === 'colorboard' || materialLower === 'colour' || materialLower === 'colourboard') {
+            args.material = 'Colorboard TBA';
+          } else if (materialLower.includes('red') && materialLower.includes('color')) {
+            args.material = 'Red Colorboard';
+          } else if (materialLower.includes('blue') && materialLower.includes('color')) {
+            args.material = 'Blue Colorboard';
+          } else if (materialLower.includes('white') && materialLower.includes('color')) {
+            args.material = 'White Colorboard';
+          } else if (materialLower.includes('black') && materialLower.includes('color')) {
+            args.material = 'Black Colorboard';
+          } else if (materialLower.includes('green') && materialLower.includes('color')) {
+            args.material = 'Green Colorboard';
+          } else if ((materialLower.includes('grey') || materialLower.includes('gray')) && materialLower.includes('color')) {
+            args.material = 'Grey Colorboard';
+          } else if (materialLower.includes('yellow') && materialLower.includes('color')) {
+            args.material = 'Yellow Colorboard';
           }
         }
         
