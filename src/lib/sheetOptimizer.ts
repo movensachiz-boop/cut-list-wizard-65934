@@ -285,33 +285,54 @@ export function optimizeSheetLayout(
     }
   });
 
-  // Sort parts based on optimization mode
-  if (config.mode === 'precision') {
-    // Precision mode: Advanced sorting for minimal waste
-    expandedParts.sort((a, b) => {
-      // Prioritize by area, then by perimeter for better nesting
-      const areaA = a.width * a.height;
-      const areaB = b.width * b.height;
-      if (areaA !== areaB) return areaB - areaA;
-      return (b.width + b.height) - (a.width + a.height);
-    });
-  } else if (config.mode === 'balanced') {
-    // Balanced mode: Mix of area and longest dimension
-    expandedParts.sort((a, b) => {
-      const areaA = a.width * a.height;
-      const areaB = b.width * b.height;
-      if (Math.abs(areaA - areaB) > 10000) return areaB - areaA;
-      return Math.max(b.width, b.height) - Math.max(a.width, a.height);
-    });
-  } else {
-    // Fast mode: Simple area-based sorting
-    expandedParts.sort((a, b) => b.width * b.height - a.width * a.height);
-  }
+  // Group parts by material to fill sheets completely before moving to next material
+  const partsByMaterial = new Map<string, Part[]>();
+  expandedParts.forEach(part => {
+    const material = part.material || 'Unknown';
+    if (!partsByMaterial.has(material)) {
+      partsByMaterial.set(material, []);
+    }
+    partsByMaterial.get(material)!.push(part);
+  });
+
+  // Sort parts within each material group based on optimization mode
+  const sortParts = (parts: Part[]) => {
+    if (config.mode === 'precision') {
+      // Precision mode: Advanced sorting for minimal waste
+      parts.sort((a, b) => {
+        // Prioritize by area, then by perimeter for better nesting
+        const areaA = a.width * a.height;
+        const areaB = b.width * b.height;
+        if (areaA !== areaB) return areaB - areaA;
+        return (b.width + b.height) - (a.width + a.height);
+      });
+    } else if (config.mode === 'balanced') {
+      // Balanced mode: Mix of area and longest dimension
+      parts.sort((a, b) => {
+        const areaA = a.width * a.height;
+        const areaB = b.width * b.height;
+        if (Math.abs(areaA - areaB) > 10000) return areaB - areaA;
+        return Math.max(b.width, b.height) - Math.max(a.width, a.height);
+      });
+    } else {
+      // Fast mode: Simple area-based sorting
+      parts.sort((a, b) => b.width * b.height - a.width * a.height);
+    }
+  };
+
+  // Sort parts within each material group
+  partsByMaterial.forEach(parts => sortParts(parts));
+
+  // Flatten back to single array, grouped by material
+  const sortedExpandedParts: Part[] = [];
+  partsByMaterial.forEach(parts => {
+    sortedExpandedParts.push(...parts);
+  });
 
   let currentSheetIndex = 0;
   let packer: GuillotinePacker | null = null;
 
-  for (const part of expandedParts) {
+  for (const part of sortedExpandedParts) {
     // Check if part fits on current sheet
     if (!packer || !packer.canFit(part, config.allowRotation)) {
       // Save current sheet if it exists
