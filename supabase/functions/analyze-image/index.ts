@@ -79,12 +79,27 @@ Your task is to identify CUTTING DIMENSIONS (panels, boards, sheets):
       * "AR" or "All Round" or "o" (letter o) = All Round
       * "NE" or "ne" or "None", "No edge", "-" = None
    
-   SPECIAL VISUAL INDICATORS (UNDERLINES):
-   - If the FIRST number (length) has ONE underline → "1 Long"
-   - If the FIRST number (length) has TWO underlines (double underline) → "2 Long"
-   - If the SECOND number (width) has ONE underline → "1 Short"
-   - If the SECOND number (width) has TWO underlines (double underline) → "2 Short"
-   - If BOTH numbers are underlined (any combination) → "All Round"
+   **CRITICAL: UNDERLINE DETECTION FOR EDGING**
+   LOOK VERY CAREFULLY for ANY visual emphasis on numbers (underlines, highlights, or marks):
+   
+   UNDERLINE RULES (HIGHEST PRIORITY - CHECK THIS FIRST):
+   - If you see the FIRST number (length) with ONE line under it → edging = "1 Long"
+   - If you see the FIRST number (length) with TWO lines under it or double-underlined → edging = "2 Long"
+   - If you see the SECOND number (width) with ONE line under it → edging = "1 Short"
+   - If you see the SECOND number (width) with TWO lines under it or double-underlined → edging = "2 Short"
+   - If BOTH numbers have underlines (any combination) → edging = "All Round"
+   
+   Underlines can appear as:
+   - Straight line(s) under the number: 300 with line(s) below
+   - Hand-drawn line(s) beneath digits
+   - Highlighted or emphasized numbers
+   - Numbers in boxes or circles (treat as underlined)
+   
+   EXAMPLES:
+   - "300 x 400 x 2" where 300 has one underline → material="...|1 Long"
+   - "300 x 400 x 2" where 400 has one underline → material="...|1 Short"
+   - "300 x 400 x 2" where both are underlined → material="...|All Round"
+   - "300 x 400 x 2" where 400 has double underline → material="...|2 Short"
    
    EDGING THICKNESS NOTATION:
    - If you see a measurement like "32mm" or "32" after dimensions, include it in the edging info
