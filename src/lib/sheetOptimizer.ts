@@ -488,14 +488,14 @@ function calculateTotalEdgingLength(parts: PlacedPart[]): number {
       // All edges
       length = 2 * (part.width + part.height);
     } else {
-      // Count long edges (width)
-      const longMatch = edgingType.match(/(\d+)\s*L/);
+      // Count long edges (width) - handles formats like 1L, 1L_2S, 1L-2S
+      const longMatch = edgingType.match(/(\d+)\s*[_\-\s]*L/);
       if (longMatch) {
         length += parseInt(longMatch[1]) * part.width;
       }
       
-      // Count short edges (height)
-      const shortMatch = edgingType.match(/(\d+)\s*S/);
+      // Count short edges (height) - handles formats like 2S, 1L_2S, 1L-2S
+      const shortMatch = edgingType.match(/(\d+)\s*[_\-\s]*S/);
       if (shortMatch) {
         length += parseInt(shortMatch[1]) * part.height;
       }
