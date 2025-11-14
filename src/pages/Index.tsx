@@ -555,7 +555,7 @@ const Index = () => {
     setItems([]);
     setInputValue("");
     setBulkInput("");
-    setMaterial("Superwood");
+    setMaterial("White Melamine");
     setEdging("None");
     setEdgingMaterial("White Edging");
     setNotes("");
