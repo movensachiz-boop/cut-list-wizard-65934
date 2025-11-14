@@ -63,16 +63,16 @@ const Index = () => {
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const isAutoCorrectingRef = useRef(false);
 
-  // Auto-edging function
-  const applyAutoEdging = useCallback((itemsToProcess: CuttingItem[]) => {
-    if (!itemsToProcess || !Array.isArray(itemsToProcess) || itemsToProcess.length === 0) {
-      return itemsToProcess;
-    }
+  // Auto-edging logic: Apply "1 Long" to melamine/colorboard items
+  useEffect(() => {
+    // Prevent infinite loops and validate items
+    if (isAutoCorrectingRef.current || !items || !Array.isArray(items) || items.length === 0) return;
 
     try {
+      // Group items by material with defensive checks
       const materialGroups = new Map<string, CuttingItem[]>();
-      itemsToProcess.forEach(item => {
-        if (!item || !item.material) return;
+      items.forEach(item => {
+        if (!item || !item.material) return; // Skip invalid items
         const existing = materialGroups.get(item.material) || [];
         materialGroups.set(item.material, [...existing, item]);
       });
@@ -81,11 +81,14 @@ const Index = () => {
       let hasChanges = false;
 
       materialGroups.forEach((groupItems, material) => {
+        // Defensive checks
         if (!groupItems || !Array.isArray(groupItems) || groupItems.length === 0 || !material) {
           return;
         }
         
         const materialLower = material.toLowerCase();
+        
+        // Check if this material should have auto-edging
         const shouldAutoEdge = 
           (materialLower.includes('melamine') || materialLower.includes('colorboard')) &&
           !materialLower.includes('superwood') &&
@@ -97,11 +100,13 @@ const Index = () => {
           return;
         }
 
+        // Check if any items in this group already have "1 Long" edging
         const hasExplicit1L = groupItems.some(item => item && item.edging === "1 Long");
 
         groupItems.forEach(item => {
-          if (!item) return;
+          if (!item) return; // Skip invalid items
           
+          // If no items have 1L and this item has no edging, apply 1L
           if (!hasExplicit1L && (item.edging === "None" || !item.edging)) {
             updatedItems.push({ ...item, edging: "1 Long" });
             hasChanges = true;
@@ -111,34 +116,18 @@ const Index = () => {
         });
       });
 
-      return hasChanges ? updatedItems : itemsToProcess;
-    } catch (error) {
-      console.error("Error in auto-edging logic:", error);
-      return itemsToProcess;
-    }
-  }, []);
-
-  // Apply auto-edging automatically when items change (but not during mass corrections)
-  useEffect(() => {
-    if (isAutoCorrectingRef.current || !items || items.length === 0) return;
-    
-    const processedItems = applyAutoEdging(items);
-    
-    // Only update if something actually changed
-    if (processedItems !== items) {
-      const itemsChanged = processedItems.some((item, index) => 
-        !items[index] || item.edging !== items[index].edging
-      );
-      
-      if (itemsChanged) {
+      if (hasChanges) {
         isAutoCorrectingRef.current = true;
-        setItems(processedItems);
+        setItems(updatedItems);
         setTimeout(() => {
           isAutoCorrectingRef.current = false;
         }, 100);
       }
+    } catch (error) {
+      console.error("Error in auto-edging logic:", error);
+      isAutoCorrectingRef.current = false;
     }
-  }, [items, applyAutoEdging]);
+  }, [items]);
   
   useEffect(() => {
     const handlePaste = (e: ClipboardEvent) => {
@@ -226,32 +215,43 @@ const Index = () => {
   };
 
   const handleUpdateMultipleItems = (itemIds: string[], updates: Partial<CuttingItem>) => {
-    console.log("handleUpdateMultipleItems called with:", { itemIds, updates });
-    
-    // Disable auto-edging during mass corrections
-    isAutoCorrectingRef.current = true;
-    
-    setItems(items.map(item => {
-      if (itemIds.includes(item.id)) {
-        return {
-          ...item,
-          ...updates
-        };
-      }
-      return item;
-    }));
-    
-    // Scale delay based on number of items updated (more items = longer delay)
-    const delay = Math.min(3000, 1000 + (itemIds.length * 50));
-    
-    setTimeout(() => {
-      isAutoCorrectingRef.current = false;
-    }, delay);
-    
-    toast({
-      title: "Items updated",
-      description: `Successfully updated ${itemIds.length} item${itemIds.length !== 1 ? 's' : ''}`
-    });
+    try {
+      console.log("handleUpdateMultipleItems called with:", { itemIds, updates });
+      
+      // Temporarily disable auto-correction during mass updates
+      isAutoCorrectingRef.current = true;
+      
+      setItems(prevItems => {
+        // Defensive check to ensure prevItems is valid
+        if (!prevItems || !Array.isArray(prevItems)) {
+          console.error("Invalid prevItems state:", prevItems);
+          return prevItems || [];
+        }
+        
+        const newItems = prevItems.map(item => 
+          itemIds.includes(item.id) ? { ...item, ...updates } : item
+        );
+        console.log("Updated items:", newItems);
+        return newItems;
+      });
+      
+      // Re-enable auto-correction after a delay
+      setTimeout(() => {
+        isAutoCorrectingRef.current = false;
+      }, 1000);
+      
+      toast({
+        title: "Items updated",
+        description: `Successfully updated ${itemIds.length} item${itemIds.length !== 1 ? 's' : ''}`
+      });
+    } catch (error) {
+      console.error("Error in handleUpdateMultipleItems:", error);
+      toast({
+        title: "Update failed",
+        description: "Failed to update items. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   const exportToCSV = () => {
@@ -303,7 +303,7 @@ const Index = () => {
     document.body.removeChild(link);
     toast({
       title: "Export successful",
-      description: `${items?.length || 0} items exported to GROX CUT CSV format`
+      description: `${items.length} items exported to GROX CUT CSV format`
     });
   };
   const addBulkItems = () => {
@@ -566,7 +566,7 @@ const Index = () => {
     });
   };
   const undoLast = () => {
-    if (!items || !Array.isArray(items) || lastBatchSize === 0 || items.length === 0) {
+    if (lastBatchSize === 0 || items.length === 0) {
       toast({
         title: "Nothing to undo",
         description: "No recent additions to remove",
@@ -584,7 +584,6 @@ const Index = () => {
     });
   };
   const toggleSelectAll = () => {
-    if (!items || !Array.isArray(items)) return;
     if (selectedItems.size === items.length) {
       setSelectedItems(new Set());
     } else {
@@ -627,19 +626,9 @@ const Index = () => {
     setSelectedItems(new Set());
   };
 
-  return <div 
-      className="min-h-screen p-4 md:p-8 relative"
-      style={{
-        backgroundImage: 'url(/matrix-bg.jpg)',
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundAttachment: 'fixed'
-      }}
-    >
-      <div className="absolute inset-0 bg-background/90 backdrop-blur-sm" />
-      <div className="relative z-10">
-        <BibleVerseSlider />
-        <div className="max-w-7xl mx-auto pt-12">
+  return <div className="min-h-screen bg-background p-4 md:p-8">
+      <BibleVerseSlider />
+      <div className="max-w-7xl mx-auto pt-12">
         {/* Header with actions */}
         <div className="flex justify-between items-center mb-8 animate-fade-in">
           <div>
@@ -785,10 +774,10 @@ const Index = () => {
         </Card>
 
         {/* Cutting List Table */}
-        {items && Array.isArray(items) && items.length > 0 && <Card className="p-8 border-2 border-primary/20 glass-effect animate-fade-in-up">
+        {items.length > 0 && <Card className="p-8 border-2 border-primary/20 glass-effect animate-fade-in-up">
             <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-6 gap-4">
               <h2 className="text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-                📋 Cutting List <span className="text-2xl">({items?.length || 0})</span>
+                📋 Cutting List <span className="text-2xl">({items.length})</span>
                 {selectedItems.size > 0 && <span className="ml-2 text-lg font-normal text-muted-foreground">
                     ({selectedItems.size} selected)
                   </span>}
@@ -1086,14 +1075,14 @@ const Index = () => {
             </div>
           </Card>}
 
-        {(!items || !Array.isArray(items) || items.length === 0) && <Card className="p-12 text-center">
+        {items.length === 0 && <Card className="p-12 text-center">
             <p className="text-muted-foreground text-lg">
               No items in cutting list. Start by adding dimensions above.
             </p>
           </Card>}
 
         {/* Hardware Selection Section */}
-        {items && Array.isArray(items) && items.length > 0 && (
+        {items.length > 0 && (
           <div className="mt-10">
             <Button 
               onClick={() => setShowHardwareSelector(!showHardwareSelector)}
@@ -1134,7 +1123,7 @@ const Index = () => {
         )}
 
         {/* Sheet Optimization Section */}
-        {items && Array.isArray(items) && items.length > 0 && (
+        {items.length > 0 && (
           <div className="mt-10">
             <SheetOptimization cuttingItems={items} />
           </div>
@@ -1143,7 +1132,6 @@ const Index = () => {
         {/* Footer Credit */}
         <div className="mt-8 text-center">
           <p className="text-sm text-muted-foreground">Assistance 0786133259</p>
-        </div>
         </div>
       </div>
     </div>;

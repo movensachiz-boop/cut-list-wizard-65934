@@ -31,9 +31,9 @@ export function detectEdgesNeedingBanding(
     return { top: true, bottom: true, left: true, right: true };
   }
 
-  // Parse format like "1L 2S", "1L_2S", "1L-2S", or "2 Long 1 Short"
-  const longMatch = type.match(/(\d+)\s*[_\-\s]*L/);
-  const shortMatch = type.match(/(\d+)\s*[_\-\s]*S/);
+  // Parse format like "1L 2S" or "2 Long 1 Short"
+  const longMatch = type.match(/(\d+)\s*L/);
+  const shortMatch = type.match(/(\d+)\s*S/);
 
   const numLong = longMatch ? parseInt(longMatch[1]) : 0;
   const numShort = shortMatch ? parseInt(shortMatch[1]) : 0;
