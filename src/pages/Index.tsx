@@ -235,10 +235,11 @@ const Index = () => {
         return newItems;
       });
       
-      // Re-enable auto-correction after a delay
+      // Dynamic delay based on number of items (1-3 seconds)
+      const delay = Math.min(1000 + (itemIds.length * 50), 3000);
       setTimeout(() => {
         isAutoCorrectingRef.current = false;
-      }, 1000);
+      }, delay);
       
       toast({
         title: "Items updated",
