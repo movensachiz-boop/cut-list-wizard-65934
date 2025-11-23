@@ -8,35 +8,35 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    --background: 200 25% 18%;
-    --foreground: 38 46% 95%;
+    --background: 208 70% 18%;
+    --foreground: 0 0% 96%;
 
-    --card: 200 20% 25%;
-    --card-foreground: 38 46% 95%;
+    --card: 208 56% 25%;
+    --card-foreground: 0 0% 96%;
 
-    --popover: 200 20% 25%;
-    --popover-foreground: 38 46% 95%;
+    --popover: 208 56% 25%;
+    --popover-foreground: 0 0% 96%;
 
-    --primary: 0 31% 34%;
+    --primary: 194 57% 27%;
     --primary-foreground: 0 0% 100%;
-    --primary-glow: 0 31% 44%;
+    --primary-glow: 194 57% 37%;
 
-    --secondary: 37 21% 35%;
-    --secondary-foreground: 38 46% 95%;
+    --secondary: 208 56% 25%;
+    --secondary-foreground: 0 0% 96%;
 
-    --muted: 37 21% 35%;
-    --muted-foreground: 38 30% 70%;
+    --muted: 208 56% 25%;
+    --muted-foreground: 0 0% 75%;
 
-    --accent: 37 21% 53%;
+    --accent: 194 57% 42%;
     --accent-foreground: 0 0% 100%;
-    --accent-glow: 37 21% 63%;
+    --accent-glow: 194 57% 52%;
 
     --destructive: 0 72% 51%;
-    --destructive-foreground: 38 46% 95%;
+    --destructive-foreground: 0 0% 96%;
 
-    --border: 200 20% 30%;
-    --input: 200 20% 30%;
-    --ring: 0 31% 34%;
+    --border: 208 56% 30%;
+    --input: 208 56% 30%;
+    --ring: 194 57% 27%;
 
     --radius: 0.75rem;
 
@@ -72,35 +72,35 @@ All colors MUST be HSL.
   }
 
   .dark {
-    --background: 200 25% 68%;
-    --foreground: 0 31% 20%;
+    --background: 0 0% 96%;
+    --foreground: 208 70% 18%;
 
-    --card: 38 46% 79%;
-    --card-foreground: 0 31% 20%;
+    --card: 0 0% 100%;
+    --card-foreground: 208 70% 18%;
 
-    --popover: 38 46% 79%;
-    --popover-foreground: 0 31% 20%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 208 70% 18%;
 
-    --primary: 0 31% 34%;
+    --primary: 194 57% 27%;
     --primary-foreground: 0 0% 100%;
-    --primary-glow: 0 31% 44%;
+    --primary-glow: 194 57% 37%;
 
-    --secondary: 38 46% 85%;
-    --secondary-foreground: 0 31% 20%;
+    --secondary: 208 10% 92%;
+    --secondary-foreground: 208 70% 18%;
 
-    --muted: 38 46% 85%;
-    --muted-foreground: 37 21% 40%;
+    --muted: 208 10% 92%;
+    --muted-foreground: 208 40% 40%;
 
-    --accent: 37 21% 53%;
+    --accent: 194 57% 42%;
     --accent-foreground: 0 0% 100%;
-    --accent-glow: 37 21% 63%;
+    --accent-glow: 194 57% 52%;
 
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 200 25% 55%;
-    --input: 200 25% 55%;
-    --ring: 0 31% 34%;
+    --border: 208 20% 85%;
+    --input: 208 20% 85%;
+    --ring: 194 57% 27%;
     
     /* Light mode gradients */
     --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)));
