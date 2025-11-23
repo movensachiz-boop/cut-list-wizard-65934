@@ -1,5 +1,5 @@
 // Image Analysis Section with automated dimension extraction
-import { Camera, ImageIcon } from "lucide-react";
+import { Camera, ImageIcon, ScanLine, Target, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 
@@ -29,7 +29,9 @@ export const ImageAnalysisSection = ({
       <div className="flex flex-col items-center gap-8 relative z-10">
         <div className="text-center space-y-3 animate-fade-in">
           <div className="inline-block">
-            <div className="text-5xl mb-2 animate-bounce-in">📸</div>
+            <div className="p-4 bg-primary/10 rounded-full mb-2 animate-bounce-in">
+              <Camera className="h-12 w-12 text-primary" />
+            </div>
           </div>
           <h2 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
             Image Analysis
@@ -59,7 +61,10 @@ export const ImageAnalysisSection = ({
             </div>
             <div className="text-center space-y-2">
               <p className="text-xl font-semibold text-foreground animate-pulse">Analyzing Image...</p>
-              <p className="text-sm text-muted-foreground">✨ Extracting dimensions with precision</p>
+              <p className="text-sm text-muted-foreground flex items-center gap-2 justify-center">
+                <Sparkles className="h-4 w-4" />
+                Extracting dimensions with precision
+              </p>
             </div>
           </div>
         ) : (
@@ -80,11 +85,20 @@ export const ImageAnalysisSection = ({
         )}
 
         <div className="flex flex-wrap items-center justify-center gap-4 text-sm text-muted-foreground">
-          <span className="flex items-center gap-1">⚡ Instant extraction</span>
+          <span className="flex items-center gap-2">
+            <ScanLine className="h-4 w-4" />
+            Instant extraction
+          </span>
           <span className="text-border">•</span>
-          <span className="flex items-center gap-1">🎯 High accuracy</span>
+          <span className="flex items-center gap-2">
+            <Target className="h-4 w-4" />
+            High accuracy
+          </span>
           <span className="text-border">•</span>
-          <span className="flex items-center gap-1">✨ Auto-formatted</span>
+          <span className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4" />
+            Auto-formatted
+          </span>
         </div>
       </div>
     </Card>

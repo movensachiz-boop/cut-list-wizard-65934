@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Trash2, Download, Plus, List, AlertTriangle } from "lucide-react";
+import { Trash2, Download, Plus, List, AlertTriangle, Zap } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { SmartSelect } from "@/components/SmartSelect";
@@ -701,7 +701,8 @@ const Index = () => {
           <div className="absolute top-0 left-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -z-10 group-hover:bg-primary/10 transition-all duration-500"></div>
           
           <h3 className="text-xl font-semibold text-foreground mb-6 flex items-center gap-2">
-            <span className="text-2xl">⚡</span> Quick Entry
+            <Zap className="h-6 w-6 text-primary" />
+            Quick Entry
           </h3>
           
           <div className="grid gap-6 md:grid-cols-6">

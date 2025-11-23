@@ -1,5 +1,6 @@
 import fastCutLogo from "@/assets/fast-cut-logo.png";
 import { useBackgroundRemoval } from "@/hooks/useBackgroundRemoval";
+import { Zap, Gauge, CheckCircle } from "lucide-react";
 
 export const HeroSection = () => {
   const { processedImage, isProcessing } = useBackgroundRemoval(fastCutLogo);
@@ -32,9 +33,22 @@ export const HeroSection = () => {
         <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent animate-shimmer bg-[length:200%_auto]">
           Professional Cutting Solutions
         </h1>
-        <p className="text-lg md:text-xl text-muted-foreground">
-          ⚡ Smart optimization • 🚀 Lightning fast entry • ✨ Professional results
-        </p>
+        <div className="flex flex-wrap items-center justify-center gap-6 text-muted-foreground">
+          <span className="flex items-center gap-2">
+            <Zap className="h-5 w-5" />
+            <span>Smart optimization</span>
+          </span>
+          <span className="text-muted-foreground/50">•</span>
+          <span className="flex items-center gap-2">
+            <Gauge className="h-5 w-5" />
+            <span>Lightning fast entry</span>
+          </span>
+          <span className="text-muted-foreground/50">•</span>
+          <span className="flex items-center gap-2">
+            <CheckCircle className="h-5 w-5" />
+            <span>Professional results</span>
+          </span>
+        </div>
         <p className="text-sm text-muted-foreground/70 italic">
           Designed by Envoy Harry
         </p>

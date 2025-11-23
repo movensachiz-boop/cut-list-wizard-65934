@@ -11,7 +11,7 @@ import { exportToCSV, exportToExcel, exportSheetLayoutToPDF } from "@/lib/export
 import { exportToCNC, exportToDXF } from "@/lib/cncExport";
 import { saveOptimizationRun } from "@/lib/optimizationHistory";
 import { OptimizationHistory } from "./OptimizationHistory";
-import { Loader2, Maximize2, Package, FileText, FileSpreadsheet, Printer, Cog, DollarSign } from "lucide-react";
+import { Loader2, Maximize2, Package, FileText, FileSpreadsheet, Printer, Cog, DollarSign, Zap, Scale, Target } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
@@ -107,7 +107,7 @@ export const SheetOptimization = ({ cuttingItems }: SheetOptimizationProps) => {
         );
         
         toast({
-          title: "Optimization Complete! 🎉",
+          title: "Optimization Complete",
           description: `Used ${stats.totalSheets} sheet(s) with ${stats.averageWastePercentage.toFixed(1)}% average waste${
             stats.totalCost ? ` • Total cost: $${stats.totalCost.toFixed(2)}` : ''
           }`,
@@ -178,13 +178,22 @@ export const SheetOptimization = ({ cuttingItems }: SheetOptimizationProps) => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="fast">
-                    ⚡ Fast
+                    <div className="flex items-center gap-2">
+                      <Zap className="h-4 w-4" />
+                      Fast
+                    </div>
                   </SelectItem>
                   <SelectItem value="balanced">
-                    ⚖️ Balanced
+                    <div className="flex items-center gap-2">
+                      <Scale className="h-4 w-4" />
+                      Balanced
+                    </div>
                   </SelectItem>
                   <SelectItem value="precision">
-                    🎯 Precision
+                    <div className="flex items-center gap-2">
+                      <Target className="h-4 w-4" />
+                      Precision
+                    </div>
                   </SelectItem>
                 </SelectContent>
               </Select>
@@ -484,7 +493,7 @@ export const SheetOptimization = ({ cuttingItems }: SheetOptimizationProps) => {
           <Package className="h-16 w-16 mx-auto mb-4 text-muted-foreground/50" />
           <h3 className="text-lg font-semibold mb-2">No Optimization Yet</h3>
           <p className="text-muted-foreground mb-4">
-            Add cutting items and click "Optimize Layout" to see the magic! ✨
+            Add cutting items and click "Optimize Layout" to see the results
           </p>
         </Card>
       )}
