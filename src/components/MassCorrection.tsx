@@ -96,23 +96,34 @@ export function MassCorrection({ items, onUpdateItems }: MassCorrectionProps) {
         return;
       }
 
+      // Only include fields that have been explicitly set (non-empty)
       const updates: Partial<CuttingItem> = {};
-      if (edgingType) updates.edging = edgingType;
-      if (edgingMaterial) updates.edgingMaterial = edgingMaterial;
-      if (notes) updates.notes = notes;
-      if (replaceMaterial) updates.material = replaceMaterial;
+      if (edgingType && edgingType.trim() !== "") {
+        updates.edging = edgingType;
+      }
+      if (edgingMaterial && edgingMaterial.trim() !== "") {
+        updates.edgingMaterial = edgingMaterial;
+      }
+      if (notes && notes.trim() !== "") {
+        updates.notes = notes;
+      }
+      if (replaceMaterial && replaceMaterial.trim() !== "") {
+        updates.material = replaceMaterial;
+      }
 
       if (Object.keys(updates).length === 0) {
         toast.error("Please specify at least one change");
         return;
       }
 
-      console.log("Applying updates:", updates, "to items:", Array.from(selectedItemIds));
+      console.log("Mass correction - applying updates:", updates, "to items:", Array.from(selectedItemIds));
       
       const itemIds = Array.from(selectedItemIds);
       onUpdateItems(itemIds, updates);
 
-      toast.success(`Updated ${itemIds.length} items in "${selectedMaterial}" group`);
+      // Show which fields were updated
+      const updatedFields = Object.keys(updates).join(", ");
+      toast.success(`Updated ${itemIds.length} item(s): ${updatedFields}`);
       
       // Reset form
       setEdgingType("");
@@ -120,6 +131,7 @@ export function MassCorrection({ items, onUpdateItems }: MassCorrectionProps) {
       setNotes("");
       setReplaceMaterial("");
       setSelectedItemIds(new Set());
+      setSelectedMaterial("");
       setOpen(false);
     } catch (error) {
       console.error("Error applying mass correction:", error);
