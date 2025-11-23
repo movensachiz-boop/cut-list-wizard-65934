@@ -129,6 +129,42 @@ const Index = () => {
     }
   }, [items]);
   
+  // Auto-format phone numbers in notes
+  useEffect(() => {
+    // Prevent infinite loops and validate items
+    if (isAutoCorrectingRef.current || !items || !Array.isArray(items) || items.length === 0) return;
+
+    try {
+      let hasChanges = false;
+      const updatedItems = items.map(item => {
+        if (!item || !item.notes) return item;
+        
+        // Auto-format phone numbers: convert 0XXXXXXXXX to +263 XXXXXXXXX
+        const phoneRegex = /\b0(\d{9})\b/g;
+        const formattedNotes = item.notes.replace(phoneRegex, (match, digits) => {
+          hasChanges = true;
+          return `+263 ${digits.substring(0, 3)} ${digits.substring(3, 6)} ${digits.substring(6)}`;
+        });
+        
+        if (formattedNotes !== item.notes) {
+          return { ...item, notes: formattedNotes };
+        }
+        return item;
+      });
+
+      if (hasChanges) {
+        isAutoCorrectingRef.current = true;
+        setItems(updatedItems);
+        setTimeout(() => {
+          isAutoCorrectingRef.current = false;
+        }, 100);
+      }
+    } catch (error) {
+      console.error("Error in phone number auto-formatting:", error);
+      isAutoCorrectingRef.current = false;
+    }
+  }, [items]);
+  
   useEffect(() => {
     const handlePaste = (e: ClipboardEvent) => {
       const items = e.clipboardData?.items;
@@ -167,12 +203,23 @@ const Index = () => {
       // Check if "groove" is mentioned in the input
       const hasGroove = /groove/i.test(input);
       
+      // Auto-format phone numbers: convert 0XXXXXXXXX to +263 XXXXXXXXX
+      let notesText = hasGroove ? "groove" : "";
+      const phoneRegex = /\b0(\d{9})\b/g;
+      const phoneMatches = input.match(phoneRegex);
+      if (phoneMatches) {
+        phoneMatches.forEach(phone => {
+          const formatted = `+263 ${phone.substring(1, 4)} ${phone.substring(4, 7)} ${phone.substring(7)}`;
+          notesText = notesText ? `${notesText} ${formatted}` : formatted;
+        });
+      }
+      
       return {
         length: parseInt(match[1]),
         width: parseInt(match[2]),
         quantity: parseInt(match[3]),
         edgingMaterial: has32mm ? "32mm Edging" : undefined,
-        notes: hasGroove ? "groove" : undefined
+        notes: notesText || undefined
       };
     }
     return null;
