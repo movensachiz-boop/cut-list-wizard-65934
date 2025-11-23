@@ -1,9 +1,7 @@
 import fastCutLogo from "@/assets/fast-cut-logo.png";
-import { useBackgroundRemoval } from "@/hooks/useBackgroundRemoval";
 import { Zap, Gauge, CheckCircle } from "lucide-react";
 
 export const HeroSection = () => {
-  const { processedImage, isProcessing } = useBackgroundRemoval(fastCutLogo);
   
   return (
     <div className="mb-16 flex flex-col items-center gap-8 text-center relative py-12">
@@ -16,17 +14,11 @@ export const HeroSection = () => {
       
       <div className="relative animate-bounce-in">
         <div className="absolute inset-0 blur-2xl opacity-50 bg-primary/30 rounded-full"></div>
-        {isProcessing ? (
-          <div className="w-64 h-32 flex items-center justify-center">
-            <div className="animate-pulse text-muted-foreground">Processing logo...</div>
-          </div>
-        ) : (
-          <img 
-            src={processedImage || fastCutLogo} 
-            alt="FAST CUT Logo" 
-            className="w-64 h-auto drop-shadow-2xl relative z-10 hover:scale-105 transition-transform duration-500" 
-          />
-        )}
+        <img 
+          src={fastCutLogo} 
+          alt="FAST CUT Logo" 
+          className="w-64 h-auto drop-shadow-2xl relative z-10 hover:scale-105 transition-transform duration-500" 
+        />
       </div>
       
       <div className="space-y-4 animate-fade-in-up max-w-3xl">
