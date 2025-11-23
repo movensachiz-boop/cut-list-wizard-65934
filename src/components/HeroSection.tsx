@@ -33,7 +33,7 @@ export const HeroSection = () => {
           Professional Cutting Solutions
         </h1>
         <p className="text-lg md:text-xl text-muted-foreground">
-          ⚡ AI-powered optimization • 🚀 Lightning fast entry • ✨ Professional results
+          ⚡ Smart optimization • 🚀 Lightning fast entry • ✨ Professional results
         </p>
         <p className="text-sm text-muted-foreground/70 italic">
           Designed by Envoy Harry

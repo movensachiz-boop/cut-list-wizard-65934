@@ -1,4 +1,4 @@
-// Image Analysis Section with AI-powered dimension extraction
+// Image Analysis Section with automated dimension extraction
 import { Camera, ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -59,7 +59,7 @@ export const ImageAnalysisSection = ({
             </div>
             <div className="text-center space-y-2">
               <p className="text-xl font-semibold text-foreground animate-pulse">Analyzing Image...</p>
-              <p className="text-sm text-muted-foreground">✨ AI is extracting dimensions with precision</p>
+              <p className="text-sm text-muted-foreground">✨ Extracting dimensions with precision</p>
             </div>
           </div>
         ) : (
