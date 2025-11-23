@@ -268,6 +268,26 @@ const Index = () => {
     try {
       console.log("handleUpdateMultipleItems called with:", { itemIds, updates });
       
+      if (!itemIds || itemIds.length === 0) {
+        console.error("No item IDs provided");
+        toast({
+          title: "Update failed",
+          description: "No items selected for update",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      if (!updates || Object.keys(updates).length === 0) {
+        console.error("No updates provided");
+        toast({
+          title: "Update failed", 
+          description: "No changes specified",
+          variant: "destructive"
+        });
+        return;
+      }
+      
       // Temporarily disable auto-correction during mass updates
       isAutoCorrectingRef.current = true;
       
@@ -278,10 +298,16 @@ const Index = () => {
           return prevItems || [];
         }
         
-        const newItems = prevItems.map(item => 
-          itemIds.includes(item.id) ? { ...item, ...updates } : item
-        );
-        console.log("Updated items:", newItems);
+        // Apply updates only to selected items, preserving all other fields
+        const newItems = prevItems.map(item => {
+          if (itemIds.includes(item.id)) {
+            // Only update fields that are in the updates object
+            return { ...item, ...updates };
+          }
+          return item;
+        });
+        
+        console.log("Mass update complete. Updated items:", newItems.filter(item => itemIds.includes(item.id)));
         return newItems;
       });
       
