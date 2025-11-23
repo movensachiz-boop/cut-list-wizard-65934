@@ -648,14 +648,14 @@ const Index = () => {
             setItems([...items, newItem]);
             setLastBatchSize(1);
             toast({
-              title: "Item added by AI",
+              title: "Item added",
               description: `${item.length}x${item.width}x${item.quantity} added to cutting list`
             });
           }}
           onRemoveItems={(itemIds) => {
             setItems(items.filter(item => !itemIds.includes(item.id)));
             toast({
-              title: "Items removed by AI",
+              title: "Items removed",
               description: `${itemIds.length} item(s) removed from cutting list`
             });
           }}
@@ -664,7 +664,7 @@ const Index = () => {
               item.id === itemId ? { ...item, ...updates } : item
             ));
             toast({
-              title: "Item updated by AI",
+              title: "Item updated",
               description: "Cutting list item has been updated"
             });
           }}
@@ -672,7 +672,7 @@ const Index = () => {
             setItems([]);
             setSelectedItems(new Set());
             toast({
-              title: "List cleared by AI",
+              title: "List cleared",
               description: "All items removed from cutting list"
             });
           }}

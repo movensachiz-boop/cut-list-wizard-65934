@@ -201,7 +201,7 @@ export function HardwareSelector({ cuttingListId, onHardwareChange }: HardwareSe
           Hardware Selection
         </CardTitle>
         <CardDescription>
-          Search and add hardware items using AI-powered matching
+          Search and add hardware items with smart matching
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">

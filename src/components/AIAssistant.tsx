@@ -135,7 +135,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
     } catch (error: any) {
       console.error("AI Assistant error:", error);
       toast({
-        title: "AI Assistant unavailable",
+        title: "Assistant unavailable",
         description: error.message,
         variant: "destructive",
       });
@@ -160,7 +160,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
       <DialogTrigger asChild>
         <Button variant="accent" size="lg" className="gap-2">
           <Sparkles className="h-5 w-5" />
-          AI Assistant
+          Smart Assistant
         </Button>
       </DialogTrigger>
       <DialogContent className="glass-effect max-w-3xl h-[80vh] flex flex-col p-0">
@@ -169,7 +169,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({
             <div>
               <DialogTitle className="flex items-center gap-2">
                 <Sparkles className="h-5 w-5 text-accent" />
-                AI Assistant
+                Smart Assistant
               </DialogTitle>
               <DialogDescription>
                 Ask me anything about the app, materials, cutting optimization, or troubleshooting
