@@ -54,6 +54,9 @@ const Index = () => {
   const [bulkMaterial, setBulkMaterial] = useState("White Melamine");
   const [bulkEdging, setBulkEdging] = useState("None");
   const [bulkEdgingMaterial, setBulkEdgingMaterial] = useState("White Edging");
+  const [initialBulkMaterial, setInitialBulkMaterial] = useState("White Melamine");
+  const [initialBulkEdging, setInitialBulkEdging] = useState("None");
+  const [initialBulkEdgingMaterial, setInitialBulkEdgingMaterial] = useState("White Edging");
   const [currentCuttingListId, setCurrentCuttingListId] = useState<string | null>(null);
   const [showHardwareSelector, setShowHardwareSelector] = useState(false);
   const {
@@ -635,7 +638,12 @@ const Index = () => {
     if (selectedItems.size === items.length) {
       setSelectedItems(new Set());
     } else {
-      setSelectedItems(new Set(items.map(item => item.id)));
+      const newSelected = new Set(items.map(item => item.id));
+      setSelectedItems(newSelected);
+      // Set initial bulk values when selecting items
+      setInitialBulkMaterial(bulkMaterial);
+      setInitialBulkEdging(bulkEdging);
+      setInitialBulkEdgingMaterial(bulkEdgingMaterial);
     }
   };
   const toggleSelectItem = (id: string) => {
@@ -644,6 +652,12 @@ const Index = () => {
       newSelected.delete(id);
     } else {
       newSelected.add(id);
+      // Set initial bulk values when first item is selected
+      if (newSelected.size === 1) {
+        setInitialBulkMaterial(bulkMaterial);
+        setInitialBulkEdging(bulkEdging);
+        setInitialBulkEdgingMaterial(bulkEdgingMaterial);
+      }
     }
     setSelectedItems(newSelected);
   };
@@ -656,20 +670,38 @@ const Index = () => {
       });
       return;
     }
+    
+    // Determine which fields have changed
+    const materialChanged = bulkMaterial !== initialBulkMaterial;
+    const edgingChanged = bulkEdging !== initialBulkEdging;
+    const edgingMaterialChanged = bulkEdgingMaterial !== initialBulkEdgingMaterial;
+    
     setItems(items.map(item => {
       if (selectedItems.has(item.id)) {
+        const updates: Partial<CuttingItem> = {};
+        if (materialChanged) updates.material = bulkMaterial;
+        if (edgingChanged) updates.edging = bulkEdging;
+        if (edgingMaterialChanged) updates.edgingMaterial = bulkEdgingMaterial;
+        
         return {
           ...item,
-          material: bulkMaterial,
-          edging: bulkEdging,
-          edgingMaterial: bulkEdgingMaterial
+          ...updates
         };
       }
       return item;
     }));
+    
+    const changedFields = [
+      materialChanged && "material",
+      edgingChanged && "edging",
+      edgingMaterialChanged && "edging material"
+    ].filter(Boolean);
+    
     toast({
       title: "Bulk changes applied",
-      description: `Updated ${selectedItems.size} item(s)`
+      description: changedFields.length > 0 
+        ? `Updated ${changedFields.join(", ")} for ${selectedItems.size} item(s)`
+        : `No changes made`
     });
     setSelectedItems(new Set());
   };
