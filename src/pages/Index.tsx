@@ -1018,21 +1018,51 @@ const Index = () => {
                         <Checkbox checked={selectedItems.has(item.id)} onCheckedChange={() => toggleSelectItem(item.id)} />
                       </td>
                       <td className="p-3 text-muted-foreground">{index + 1}</td>
-                      <td className="p-3 font-mono text-foreground">
+                      <td className="p-2">
                         <div className="flex items-center gap-2">
-                          {item.length}
+                          <Input 
+                            type="number" 
+                            value={item.length} 
+                            onChange={(e) => {
+                              const value = parseInt(e.target.value);
+                              if (!isNaN(value) && value > 0) {
+                                setItems(items.map(i => i.id === item.id ? { ...i, length: value } : i));
+                              }
+                            }}
+                            className="h-8 w-24 text-sm font-mono"
+                          />
                           {(item.confidence === "low" || item.confidence === "medium") && <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-500" />}
                         </div>
                       </td>
-                      <td className="p-3 font-mono text-foreground">
+                      <td className="p-2">
                         <div className="flex items-center gap-2">
-                          {item.width}
+                          <Input 
+                            type="number" 
+                            value={item.width} 
+                            onChange={(e) => {
+                              const value = parseInt(e.target.value);
+                              if (!isNaN(value) && value > 0) {
+                                setItems(items.map(i => i.id === item.id ? { ...i, width: value } : i));
+                              }
+                            }}
+                            className="h-8 w-24 text-sm font-mono"
+                          />
                           {(item.confidence === "low" || item.confidence === "medium") && <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-500" />}
                         </div>
                       </td>
-                      <td className="p-3 font-mono text-foreground">
+                      <td className="p-2">
                         <div className="flex items-center gap-2">
-                          {item.quantity}
+                          <Input 
+                            type="number" 
+                            value={item.quantity} 
+                            onChange={(e) => {
+                              const value = parseInt(e.target.value);
+                              if (!isNaN(value) && value > 0) {
+                                setItems(items.map(i => i.id === item.id ? { ...i, quantity: value } : i));
+                              }
+                            }}
+                            className="h-8 w-20 text-sm font-mono"
+                          />
                           {(item.confidence === "low" || item.confidence === "medium") && <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-500" />}
                         </div>
                       </td>
