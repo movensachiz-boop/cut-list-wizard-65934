@@ -637,23 +637,29 @@ const Index = () => {
   const toggleSelectAll = () => {
     if (selectedItems.size === items.length) {
       setSelectedItems(new Set());
-    } else {
-      const newSelected = new Set(items.map(item => item.id));
-      setSelectedItems(newSelected);
-      // Set initial bulk values when selecting items
+      // Reset initial values when clearing selection
       setInitialBulkMaterial(bulkMaterial);
       setInitialBulkEdging(bulkEdging);
       setInitialBulkEdgingMaterial(bulkEdgingMaterial);
+    } else {
+      const newSelected = new Set(items.map(item => item.id));
+      setSelectedItems(newSelected);
     }
   };
   const toggleSelectItem = (id: string) => {
     const newSelected = new Set(selectedItems);
     if (newSelected.has(id)) {
       newSelected.delete(id);
+      // Reset initial values when clearing last selection
+      if (newSelected.size === 0) {
+        setInitialBulkMaterial(bulkMaterial);
+        setInitialBulkEdging(bulkEdging);
+        setInitialBulkEdgingMaterial(bulkEdgingMaterial);
+      }
     } else {
       newSelected.add(id);
       // Set initial bulk values when first item is selected
-      if (newSelected.size === 1) {
+      if (selectedItems.size === 0) {
         setInitialBulkMaterial(bulkMaterial);
         setInitialBulkEdging(bulkEdging);
         setInitialBulkEdgingMaterial(bulkEdgingMaterial);
