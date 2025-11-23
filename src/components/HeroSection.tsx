@@ -22,7 +22,7 @@ export const HeroSection = () => {
       </div>
       
       <div className="space-y-4 animate-fade-in-up max-w-3xl">
-        <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent animate-shimmer bg-[length:200%_auto]">
+        <h1 className="text-4xl md:text-5xl font-bold text-white">
           Professional Cutting Solutions
         </h1>
         <div className="flex flex-wrap items-center justify-center gap-6 text-muted-foreground">
