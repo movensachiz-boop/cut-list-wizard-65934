@@ -49,8 +49,8 @@ export const HeroSection = () => {
             <span>Professional results</span>
           </span>
         </div>
-        <p className="text-sm text-muted-foreground/70 italic">
-          Designed by Envoy Harry
+        <p className="text-sm text-muted-foreground/70 font-semibold tracking-wide">
+          DATAPLEX PROPERTIES
         </p>
       </div>
     </div>
