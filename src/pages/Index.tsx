@@ -1133,7 +1133,15 @@ const Index = () => {
 
         {/* Footer Credit */}
         <div className="mt-8 text-center">
-          <p className="text-sm text-muted-foreground">Assistance +263 786133259</p>
+          <p className="text-sm text-muted-foreground">
+            Assistance{" "}
+            <a 
+              href="tel:+263786133259" 
+              className="text-accent hover:text-accent-glow transition-colors underline"
+            >
+              +263 786133259
+            </a>
+          </p>
         </div>
       </div>
     </div>;
