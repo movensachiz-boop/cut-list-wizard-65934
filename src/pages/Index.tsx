@@ -105,17 +105,31 @@ const Index = () => {
 
         // Check if any items in this group already have "1 Long" edging
         const hasExplicit1L = groupItems.some(item => item && item.edging === "1 Long");
+        
+        // Check if this material should default to "Colour Edging"
+        const shouldDefaultColourEdging = 
+          materialLower === 'white melamine' || 
+          (materialLower.includes('colorboard') && materialLower.includes('tba')) ||
+          (materialLower.includes('color board') && materialLower.includes('tba'));
 
         groupItems.forEach(item => {
           if (!item) return; // Skip invalid items
           
+          let updatedItem = { ...item };
+          
           // If no items have 1L and this item has no edging, apply 1L
           if (!hasExplicit1L && (item.edging === "None" || !item.edging)) {
-            updatedItems.push({ ...item, edging: "1 Long" });
+            updatedItem.edging = "1 Long";
             hasChanges = true;
-          } else {
-            updatedItems.push(item);
           }
+          
+          // Auto-set edging material to "Colour Edging" for White Melamine and Colorboard TBA
+          if (shouldDefaultColourEdging && (!item.edgingMaterial || item.edgingMaterial.trim() === '')) {
+            updatedItem.edgingMaterial = "Colour Edging";
+            hasChanges = true;
+          }
+          
+          updatedItems.push(updatedItem);
         });
       });
 
