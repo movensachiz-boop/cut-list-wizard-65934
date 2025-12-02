@@ -152,28 +152,38 @@ export const LicenseGate = ({ children }: LicenseGateProps) => {
   const isExpiringSoon = daysRemaining <= 7 && daysRemaining > 0;
   const isExpired = daysRemaining <= 0;
 
+  // Debug logging
+  console.log('License Gate - isLicenseValid:', isLicenseValid);
+  console.log('License Gate - licenseInfo:', licenseInfo);
+  console.log('License Gate - daysRemaining:', daysRemaining);
+
   return (
     <>
       {licenseInfo && (
-        <div className={`border-b py-2 px-4 text-center ${
-          isExpired ? 'bg-destructive/10 border-destructive/20' : 
-          isExpiringSoon ? 'bg-orange-500/10 border-orange-500/20' : 
-          'bg-primary/10 border-primary/20'
-        }`}>
-          <p className="text-sm text-foreground">
-            Licensed to: <span className="font-semibold">{licenseInfo.company_name}</span> | 
-            Expires: <span className="font-semibold">{new Date(licenseInfo.expiry_date).toLocaleDateString()}</span> | 
-            <span className={`font-semibold ${
+        <div 
+          className={`fixed top-0 left-0 right-0 z-50 border-b py-3 px-4 text-center ${
+            isExpired ? 'bg-destructive/20 border-destructive' : 
+            isExpiringSoon ? 'bg-orange-500/20 border-orange-500' : 
+            'bg-primary/20 border-primary'
+          }`}
+          style={{ minHeight: '48px' }}
+        >
+          <p className="text-sm font-medium">
+            Licensed to: <span className="font-bold">{licenseInfo.company_name}</span> | 
+            Expires: <span className="font-bold">{new Date(licenseInfo.expiry_date).toLocaleDateString()}</span> | 
+            <span className={`font-bold text-lg ${
               isExpired ? 'text-destructive' : 
               isExpiringSoon ? 'text-orange-600' : 
               'text-foreground'
             }`}>
-              {isExpired ? 'EXPIRED' : `${daysRemaining} day${daysRemaining !== 1 ? 's' : ''} remaining`}
+              {isExpired ? '⚠️ EXPIRED' : `⏱️ ${daysRemaining} day${daysRemaining !== 1 ? 's' : ''} remaining`}
             </span>
           </p>
         </div>
       )}
-      {children}
+      <div style={{ paddingTop: licenseInfo ? '48px' : '0' }}>
+        {children}
+      </div>
     </>
   );
 };
