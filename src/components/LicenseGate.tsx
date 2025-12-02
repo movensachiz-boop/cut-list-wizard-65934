@@ -139,13 +139,37 @@ export const LicenseGate = ({ children }: LicenseGateProps) => {
     );
   }
 
+  const getDaysRemaining = () => {
+    if (!licenseInfo) return 0;
+    const now = new Date();
+    const expiry = new Date(licenseInfo.expiry_date);
+    const diffTime = expiry.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+  };
+
+  const daysRemaining = getDaysRemaining();
+  const isExpiringSoon = daysRemaining <= 7 && daysRemaining > 0;
+  const isExpired = daysRemaining <= 0;
+
   return (
     <>
       {licenseInfo && (
-        <div className="bg-primary/10 border-b border-primary/20 py-2 px-4 text-center">
+        <div className={`border-b py-2 px-4 text-center ${
+          isExpired ? 'bg-destructive/10 border-destructive/20' : 
+          isExpiringSoon ? 'bg-orange-500/10 border-orange-500/20' : 
+          'bg-primary/10 border-primary/20'
+        }`}>
           <p className="text-sm text-foreground">
             Licensed to: <span className="font-semibold">{licenseInfo.company_name}</span> | 
-            Expires: <span className="font-semibold">{new Date(licenseInfo.expiry_date).toLocaleDateString()}</span>
+            Expires: <span className="font-semibold">{new Date(licenseInfo.expiry_date).toLocaleDateString()}</span> | 
+            <span className={`font-semibold ${
+              isExpired ? 'text-destructive' : 
+              isExpiringSoon ? 'text-orange-600' : 
+              'text-foreground'
+            }`}>
+              {isExpired ? 'EXPIRED' : `${daysRemaining} day${daysRemaining !== 1 ? 's' : ''} remaining`}
+            </span>
           </p>
         </div>
       )}
