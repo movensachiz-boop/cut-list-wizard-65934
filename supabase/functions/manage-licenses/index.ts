@@ -16,7 +16,74 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Verify user is authenticated
+    const { action, ...data } = await req.json();
+
+    // Validate action doesn't require authentication
+    if (action === 'validate') {
+      const { license_key } = data;
+      
+      if (!license_key) {
+        return new Response(JSON.stringify({ 
+          valid: false, 
+          error: 'License key is required' 
+        }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const { data: license, error } = await supabase
+        .from('licenses')
+        .select('*')
+        .eq('license_key', license_key)
+        .single();
+
+      if (error || !license) {
+        console.log('License not found:', license_key);
+        return new Response(JSON.stringify({ 
+          valid: false, 
+          error: 'Invalid license key' 
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      // Check if license is suspended
+      if (license.status === 'suspended') {
+        return new Response(JSON.stringify({ 
+          valid: false, 
+          error: 'License has been suspended',
+          reason: license.suspended_reason 
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      // Check if license is expired
+      const now = new Date();
+      const expiryDate = new Date(license.expiry_date);
+      if (expiryDate < now) {
+        return new Response(JSON.stringify({ 
+          valid: false, 
+          error: 'License has expired',
+          expiry_date: license.expiry_date 
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      // License is valid
+      return new Response(JSON.stringify({ 
+        valid: true,
+        company_name: license.company_name,
+        expiry_date: license.expiry_date,
+        status: license.status
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // All other actions require authentication
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
@@ -49,8 +116,6 @@ serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-
-    const { action, ...data } = await req.json();
 
     switch (action) {
       case 'create': {
