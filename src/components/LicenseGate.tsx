@@ -21,6 +21,13 @@ export const LicenseGate = ({ children }: LicenseGateProps) => {
 
   useEffect(() => {
     checkStoredLicense();
+    
+    // Re-validate license every 30 seconds
+    const interval = setInterval(() => {
+      checkStoredLicense();
+    }, 30000);
+    
+    return () => clearInterval(interval);
   }, []);
 
   const checkStoredLicense = async () => {
@@ -64,7 +71,11 @@ export const LicenseGate = ({ children }: LicenseGateProps) => {
         }));
         return true;
       } else {
-        toast.error(data.error || "Invalid license");
+        // License is invalid/suspended - clear everything and force re-authentication
+        setIsLicenseValid(false);
+        setLicenseInfo(null);
+        localStorage.removeItem("app_license");
+        toast.error(data.error || "License is no longer valid");
         return false;
       }
     } catch (err) {
