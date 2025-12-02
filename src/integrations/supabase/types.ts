@@ -178,6 +178,48 @@ export type Database = {
         }
         Relationships: []
       }
+      licenses: {
+        Row: {
+          api_key: string
+          assigned_user_id: string | null
+          company_name: string
+          created_at: string | null
+          expiry_date: string
+          id: string
+          license_key: string
+          notes: string | null
+          status: Database["public"]["Enums"]["license_status"]
+          suspended_at: string | null
+          suspended_reason: string | null
+        }
+        Insert: {
+          api_key: string
+          assigned_user_id?: string | null
+          company_name: string
+          created_at?: string | null
+          expiry_date: string
+          id?: string
+          license_key: string
+          notes?: string | null
+          status?: Database["public"]["Enums"]["license_status"]
+          suspended_at?: string | null
+          suspended_reason?: string | null
+        }
+        Update: {
+          api_key?: string
+          assigned_user_id?: string | null
+          company_name?: string
+          created_at?: string | null
+          expiry_date?: string
+          id?: string
+          license_key?: string
+          notes?: string | null
+          status?: Database["public"]["Enums"]["license_status"]
+          suspended_at?: string | null
+          suspended_reason?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           company_name: string | null
@@ -369,6 +411,27 @@ export type Database = {
           },
         ]
       }
+      user_roles: {
+        Row: {
+          created_at: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
       workspace_members: {
         Row: {
           created_at: string | null
@@ -436,10 +499,20 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      generate_api_key: { Args: never; Returns: string }
+      generate_license_key: { Args: never; Returns: string }
       get_user_count: { Args: never; Returns: number }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "user"
+      license_status: "active" | "suspended" | "expired" | "trial"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -566,6 +639,9 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "user"],
+      license_status: ["active", "suspended", "expired", "trial"],
+    },
   },
 } as const
