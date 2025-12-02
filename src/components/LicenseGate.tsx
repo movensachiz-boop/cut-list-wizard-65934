@@ -18,6 +18,7 @@ export const LicenseGate = ({ children }: LicenseGateProps) => {
     company_name: string;
     expiry_date: string;
   } | null>(null);
+  const [logoutCountdown, setLogoutCountdown] = useState<number | null>(null);
 
   useEffect(() => {
     checkStoredLicense();
@@ -29,6 +30,26 @@ export const LicenseGate = ({ children }: LicenseGateProps) => {
     
     return () => clearInterval(interval);
   }, []);
+
+  // Handle logout countdown
+  useEffect(() => {
+    if (logoutCountdown === null) return;
+    
+    if (logoutCountdown <= 0) {
+      // Force logout
+      setIsLicenseValid(false);
+      setLicenseInfo(null);
+      localStorage.removeItem("app_license");
+      setLogoutCountdown(null);
+      return;
+    }
+    
+    const timer = setTimeout(() => {
+      setLogoutCountdown(logoutCountdown - 1);
+    }, 1000);
+    
+    return () => clearTimeout(timer);
+  }, [logoutCountdown]);
 
   const checkStoredLicense = async () => {
     const stored = localStorage.getItem("app_license");
@@ -69,13 +90,22 @@ export const LicenseGate = ({ children }: LicenseGateProps) => {
           expiry_date: data.expiry_date,
           validated_at: new Date().toISOString()
         }));
+        // Clear any logout countdown if license becomes valid
+        setLogoutCountdown(null);
         return true;
       } else {
-        // License is invalid/suspended - clear everything and force re-authentication
-        setIsLicenseValid(false);
-        setLicenseInfo(null);
-        localStorage.removeItem("app_license");
-        toast.error(data.error || "License is no longer valid");
+        // License is invalid/suspended - start 5-second countdown
+        if (isLicenseValid) {
+          // Only show countdown if we were previously valid (to avoid showing on initial load)
+          toast.error(data.error || "License is no longer valid - logging out in 5 seconds");
+          setLogoutCountdown(5);
+        } else {
+          // First time validation failed
+          setIsLicenseValid(false);
+          setLicenseInfo(null);
+          localStorage.removeItem("app_license");
+          toast.error(data.error || "Invalid license");
+        }
         return false;
       }
     } catch (err) {
@@ -170,7 +200,17 @@ export const LicenseGate = ({ children }: LicenseGateProps) => {
 
   return (
     <>
-      {licenseInfo && (
+      {/* Warning banner during logout countdown */}
+      {logoutCountdown !== null && (
+        <div className="fixed top-0 left-0 right-0 z-50 bg-destructive border-b border-destructive py-3 px-4 text-center animate-pulse">
+          <p className="text-sm font-bold text-destructive-foreground">
+            ⚠️ LICENSE INVALID - Logging out in {logoutCountdown} second{logoutCountdown !== 1 ? 's' : ''}...
+          </p>
+        </div>
+      )}
+      
+      {/* Regular license info banner */}
+      {licenseInfo && logoutCountdown === null && (
         <div 
           className={`fixed top-0 left-0 right-0 z-50 border-b py-3 px-4 text-center ${
             isExpired ? 'bg-destructive/20 border-destructive' : 
@@ -192,7 +232,8 @@ export const LicenseGate = ({ children }: LicenseGateProps) => {
           </p>
         </div>
       )}
-      <div style={{ paddingTop: licenseInfo ? '48px' : '0' }}>
+      
+      <div style={{ paddingTop: (licenseInfo || logoutCountdown !== null) ? '48px' : '0' }}>
         {children}
       </div>
     </>
