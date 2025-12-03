@@ -105,10 +105,12 @@ const AdminPanel = () => {
     }
   };
 
+  const ADMIN_SECRET = 'ADMIN_XY_W_SECRET_2024';
+
   const loadLicenses = async () => {
     try {
       const { data, error } = await supabase.functions.invoke('manage-licenses', {
-        body: { action: 'list' }
+        body: { action: 'list', admin_secret: ADMIN_SECRET }
       });
 
       if (error) throw error;
@@ -122,7 +124,7 @@ const AdminPanel = () => {
   const loadStats = async () => {
     try {
       const { data, error } = await supabase.functions.invoke('manage-licenses', {
-        body: { action: 'stats' }
+        body: { action: 'stats', admin_secret: ADMIN_SECRET }
       });
 
       if (error) throw error;
@@ -135,7 +137,7 @@ const AdminPanel = () => {
   const loadIPLogs = async () => {
     try {
       const { data, error } = await supabase.functions.invoke('manage-licenses', {
-        body: { action: 'list_ip_logs' }
+        body: { action: 'list_ip_logs', admin_secret: ADMIN_SECRET }
       });
 
       if (error) throw error;
@@ -148,7 +150,7 @@ const AdminPanel = () => {
   const loadBlockedIPs = async () => {
     try {
       const { data, error } = await supabase.functions.invoke('manage-licenses', {
-        body: { action: 'list_blocked_ips' }
+        body: { action: 'list_blocked_ips', admin_secret: ADMIN_SECRET }
       });
 
       if (error) throw error;
@@ -168,6 +170,7 @@ const AdminPanel = () => {
       const { data, error } = await supabase.functions.invoke('manage-licenses', {
         body: {
           action: 'create',
+          admin_secret: ADMIN_SECRET,
           company_name: companyName,
           expiry_date: expiryDate,
           status,
@@ -197,7 +200,7 @@ const AdminPanel = () => {
       if (!reason) return;
 
       const { error } = await supabase.functions.invoke('manage-licenses', {
-        body: { action: 'suspend', id, reason }
+        body: { action: 'suspend', admin_secret: ADMIN_SECRET, id, reason }
       });
 
       if (error) throw error;
@@ -218,7 +221,7 @@ const AdminPanel = () => {
 
     try {
       const { error } = await supabase.functions.invoke('manage-licenses', {
-        body: { action: 'delete', id }
+        body: { action: 'delete', admin_secret: ADMIN_SECRET, id }
       });
 
       if (error) throw error;
@@ -240,7 +243,7 @@ const AdminPanel = () => {
 
     try {
       const { error } = await supabase.functions.invoke('manage-licenses', {
-        body: { action: 'block_ip', ip_address: blockIPAddress, reason: blockReason || null }
+        body: { action: 'block_ip', admin_secret: ADMIN_SECRET, ip_address: blockIPAddress, reason: blockReason || null }
       });
 
       if (error) throw error;
@@ -259,7 +262,7 @@ const AdminPanel = () => {
   const handleUnblockIP = async (id: string) => {
     try {
       const { error } = await supabase.functions.invoke('manage-licenses', {
-        body: { action: 'unblock_ip', id }
+        body: { action: 'unblock_ip', admin_secret: ADMIN_SECRET, id }
       });
 
       if (error) throw error;
@@ -276,7 +279,7 @@ const AdminPanel = () => {
     const reason = prompt("Enter block reason (optional):");
     try {
       const { error } = await supabase.functions.invoke('manage-licenses', {
-        body: { action: 'block_ip', ip_address: ip, reason: reason || 'Blocked from logs' }
+        body: { action: 'block_ip', admin_secret: ADMIN_SECRET, ip_address: ip, reason: reason || 'Blocked from logs' }
       });
 
       if (error) throw error;
