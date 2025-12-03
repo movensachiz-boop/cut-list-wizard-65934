@@ -7,12 +7,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { toast } from "sonner";
 import { Shield, Loader2 } from "lucide-react";
 
-const ADMIN_USERNAME = "ENVOY HARRY";
-const ADMIN_PASSWORD = "FINANCE2014$";
+const QUESTION_1_ANSWER = "Y";
+const QUESTION_2_ANSWER = "W";
 
 const AdminLogin = () => {
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
+  const [answer1, setAnswer1] = useState("");
+  const [answer2, setAnswer2] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
@@ -20,16 +20,14 @@ const AdminLogin = () => {
     e.preventDefault();
     setLoading(true);
 
-    // Small delay to simulate authentication
     await new Promise(resolve => setTimeout(resolve, 500));
 
-    if (username.toUpperCase().trim() === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
-      // Store admin session
+    if (answer1.toUpperCase().trim() === QUESTION_1_ANSWER && answer2.toUpperCase().trim() === QUESTION_2_ANSWER) {
       sessionStorage.setItem("admin_authenticated", "true");
       toast.success("Welcome, Admin!");
       navigate('/admin');
     } else {
-      toast.error("Invalid username or password");
+      toast.error("Incorrect answers");
     }
     
     setLoading(false);
@@ -42,35 +40,36 @@ const AdminLogin = () => {
           <div className="flex justify-center mb-4">
             <Shield className="h-12 w-12 text-primary" />
           </div>
-          <CardTitle className="text-2xl">Admin Login</CardTitle>
-          <CardDescription>Sign in to access the admin panel</CardDescription>
+          <CardTitle className="text-2xl">Admin Access</CardTitle>
+          <CardDescription>Answer the security questions to continue</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="username">Username</Label>
+              <Label htmlFor="answer1">What is X?</Label>
               <Input
-                id="username"
+                id="answer1"
                 type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="Enter username"
+                value={answer1}
+                onChange={(e) => setAnswer1(e.target.value)}
+                placeholder="Enter answer"
                 required
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="answer2">What is DOG?</Label>
               <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                id="answer2"
+                type="text"
+                value={answer2}
+                onChange={(e) => setAnswer2(e.target.value)}
+                placeholder="Enter answer"
                 required
               />
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Sign In
+              Submit
             </Button>
           </form>
         </CardContent>
