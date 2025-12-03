@@ -79,27 +79,36 @@ serve(async (req) => {
         .single();
 
       if (blockedIP) {
-        console.log('Blocked IP attempted access:', clientIP);
-        // Log the blocked attempt with location
-        await supabase.from('ip_logs').insert({
-          ip_address: clientIP,
-          license_key: license_key || null,
-          user_agent: userAgent,
-          action: 'blocked_attempt',
-          country: location.country,
-          city: location.city,
-          region: location.region,
-          isp: location.isp
-        });
+        // Check if 5 seconds have passed since the IP was blocked
+        const blockedAt = new Date(blockedIP.created_at);
+        const now = new Date();
+        const secondsSinceBlocked = (now.getTime() - blockedAt.getTime()) / 1000;
         
-        return new Response(JSON.stringify({ 
-          valid: false, 
-          error: 'Access denied from this location',
-          blocked: true
-        }), {
-          status: 403,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
+        if (secondsSinceBlocked >= 5) {
+          console.log('Blocked IP attempted access:', clientIP);
+          // Log the blocked attempt with location
+          await supabase.from('ip_logs').insert({
+            ip_address: clientIP,
+            license_key: license_key || null,
+            user_agent: userAgent,
+            action: 'blocked_attempt',
+            country: location.country,
+            city: location.city,
+            region: location.region,
+            isp: location.isp
+          });
+          
+          return new Response(JSON.stringify({ 
+            valid: false, 
+            error: 'Access denied from this location',
+            blocked: true
+          }), {
+            status: 403,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+        // If less than 5 seconds, allow access (grace period)
+        console.log('IP blocked but in grace period:', clientIP, 'seconds:', secondsSinceBlocked);
       }
       
       if (!license_key) {
