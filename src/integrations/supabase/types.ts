@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      blocked_ips: {
+        Row: {
+          blocked_by: string | null
+          created_at: string | null
+          id: string
+          ip_address: string
+          reason: string | null
+        }
+        Insert: {
+          blocked_by?: string | null
+          created_at?: string | null
+          id?: string
+          ip_address: string
+          reason?: string | null
+        }
+        Update: {
+          blocked_by?: string | null
+          created_at?: string | null
+          id?: string
+          ip_address?: string
+          reason?: string | null
+        }
+        Relationships: []
+      }
       cutting_items: {
         Row: {
           confidence: string | null
@@ -175,6 +199,33 @@ export type Database = {
           short_name?: string | null
           supplier_website?: string | null
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      ip_logs: {
+        Row: {
+          action: string
+          created_at: string | null
+          id: string
+          ip_address: string
+          license_key: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          action?: string
+          created_at?: string | null
+          id?: string
+          ip_address: string
+          license_key?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string | null
+          id?: string
+          ip_address?: string
+          license_key?: string | null
+          user_agent?: string | null
         }
         Relationships: []
       }
