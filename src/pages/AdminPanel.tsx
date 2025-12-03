@@ -9,8 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Shield, Plus, Ban, Trash2, Key, Calendar, Building, Activity } from "lucide-react";
+import { Shield, Plus, Ban, Trash2, Key, Calendar, Building, Activity, Globe, ShieldBan, CheckCircle } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface License {
   id: string;
@@ -32,12 +33,35 @@ interface Stats {
   expired: number;
 }
 
+interface IPLog {
+  id: string;
+  ip_address: string;
+  license_key: string | null;
+  user_agent: string | null;
+  action: string;
+  created_at: string;
+}
+
+interface BlockedIP {
+  id: string;
+  ip_address: string;
+  reason: string | null;
+  created_at: string;
+}
+
 const AdminPanel = () => {
   const [licenses, setLicenses] = useState<License[]>([]);
   const [stats, setStats] = useState<Stats>({ total: 0, active: 0, trial: 0, suspended: 0, expired: 0 });
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [showBlockDialog, setShowBlockDialog] = useState(false);
+  
+  // IP tracking state
+  const [ipLogs, setIPLogs] = useState<IPLog[]>([]);
+  const [blockedIPs, setBlockedIPs] = useState<BlockedIP[]>([]);
+  const [blockIPAddress, setBlockIPAddress] = useState("");
+  const [blockReason, setBlockReason] = useState("");
   
   // Form state
   const [companyName, setCompanyName] = useState("");
@@ -74,8 +98,7 @@ const AdminPanel = () => {
       }
 
       setIsAdmin(true);
-      await loadLicenses();
-      await loadStats();
+      await Promise.all([loadLicenses(), loadStats(), loadIPLogs(), loadBlockedIPs()]);
     } catch (error) {
       console.error('Error checking admin status:', error);
       toast.error("Failed to verify admin access");
@@ -108,6 +131,32 @@ const AdminPanel = () => {
       setStats(data.stats);
     } catch (error) {
       console.error('Error loading stats:', error);
+    }
+  };
+
+  const loadIPLogs = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('manage-licenses', {
+        body: { action: 'list_ip_logs' }
+      });
+
+      if (error) throw error;
+      setIPLogs(data.logs || []);
+    } catch (error) {
+      console.error('Error loading IP logs:', error);
+    }
+  };
+
+  const loadBlockedIPs = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('manage-licenses', {
+        body: { action: 'list_blocked_ips' }
+      });
+
+      if (error) throw error;
+      setBlockedIPs(data.blocked || []);
+    } catch (error) {
+      console.error('Error loading blocked IPs:', error);
     }
   };
 
@@ -185,6 +234,63 @@ const AdminPanel = () => {
     }
   };
 
+  const handleBlockIP = async () => {
+    if (!blockIPAddress) {
+      toast.error("Please enter an IP address");
+      return;
+    }
+
+    try {
+      const { error } = await supabase.functions.invoke('manage-licenses', {
+        body: { action: 'block_ip', ip_address: blockIPAddress, reason: blockReason || null }
+      });
+
+      if (error) throw error;
+
+      toast.success("IP address blocked");
+      setShowBlockDialog(false);
+      setBlockIPAddress("");
+      setBlockReason("");
+      await loadBlockedIPs();
+    } catch (error) {
+      console.error('Error blocking IP:', error);
+      toast.error("Failed to block IP");
+    }
+  };
+
+  const handleUnblockIP = async (id: string) => {
+    try {
+      const { error } = await supabase.functions.invoke('manage-licenses', {
+        body: { action: 'unblock_ip', id }
+      });
+
+      if (error) throw error;
+
+      toast.success("IP address unblocked");
+      await loadBlockedIPs();
+    } catch (error) {
+      console.error('Error unblocking IP:', error);
+      toast.error("Failed to unblock IP");
+    }
+  };
+
+  const handleQuickBlockIP = async (ip: string) => {
+    const reason = prompt("Enter block reason (optional):");
+    try {
+      const { error } = await supabase.functions.invoke('manage-licenses', {
+        body: { action: 'block_ip', ip_address: ip, reason: reason || 'Blocked from logs' }
+      });
+
+      if (error) throw error;
+
+      toast.success("IP address blocked");
+      await loadBlockedIPs();
+    } catch (error) {
+      console.error('Error blocking IP:', error);
+      toast.error("Failed to block IP");
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     const variants: Record<string, 'default' | 'secondary' | 'destructive'> = {
       active: 'default',
@@ -193,6 +299,21 @@ const AdminPanel = () => {
       expired: 'destructive',
     };
     return <Badge variant={variants[status] || 'default'}>{status.toUpperCase()}</Badge>;
+  };
+
+  const getActionBadge = (action: string) => {
+    const colorMap: Record<string, string> = {
+      valid_access: 'bg-green-100 text-green-800',
+      invalid_license: 'bg-red-100 text-red-800',
+      blocked_attempt: 'bg-red-200 text-red-900',
+      expired_license: 'bg-orange-100 text-orange-800',
+      suspended_license: 'bg-yellow-100 text-yellow-800',
+    };
+    return (
+      <span className={`px-2 py-1 rounded text-xs font-medium ${colorMap[action] || 'bg-gray-100 text-gray-800'}`}>
+        {action.replace('_', ' ').toUpperCase()}
+      </span>
+    );
   };
 
   if (loading) {
@@ -232,73 +353,12 @@ const AdminPanel = () => {
               <Shield className="h-8 w-8 text-primary" />
               License Management
             </h1>
-            <p className="text-muted-foreground mt-1">Manage licenses and monitor usage</p>
+            <p className="text-muted-foreground mt-1">Manage licenses, monitor usage, and control IP access</p>
           </div>
-          <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Add License
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Create New License</DialogTitle>
-                <DialogDescription>
-                  Generate a new license with trial period and API key
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4 mt-4">
-                <div>
-                  <Label htmlFor="company">Company Name *</Label>
-                  <Input
-                    id="company"
-                    value={companyName}
-                    onChange={(e) => setCompanyName(e.target.value)}
-                    placeholder="Enter company name"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="expiry">Expiry Date *</Label>
-                  <Input
-                    id="expiry"
-                    type="datetime-local"
-                    value={expiryDate}
-                    onChange={(e) => setExpiryDate(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="status">Initial Status</Label>
-                  <Select value={status} onValueChange={(v) => setStatus(v as 'active' | 'trial')}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="trial">Trial</SelectItem>
-                      <SelectItem value="active">Active</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="notes">Notes</Label>
-                  <Textarea
-                    id="notes"
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    placeholder="Additional notes..."
-                    rows={3}
-                  />
-                </div>
-                <Button onClick={handleCreateLicense} className="w-full">
-                  Create License
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
           <Card>
             <CardHeader className="pb-2">
               <CardDescription>Total Licenses</CardDescription>
@@ -332,84 +392,316 @@ const AdminPanel = () => {
               <CardTitle className="text-2xl text-red-600">{stats.expired}</CardTitle>
             </CardHeader>
           </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardDescription>Blocked IPs</CardDescription>
+              <CardTitle className="text-2xl text-destructive">{blockedIPs.length}</CardTitle>
+            </CardHeader>
+          </Card>
         </div>
 
-        {/* Licenses Table */}
-        <Card>
-          <CardHeader>
-            <CardTitle>All Licenses</CardTitle>
-            <CardDescription>View and manage all active and inactive licenses</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Company</TableHead>
-                  <TableHead>License Key</TableHead>
-                  <TableHead>API Key</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Created</TableHead>
-                  <TableHead>Expires</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {licenses.map((license) => (
-                  <TableRow key={license.id}>
-                    <TableCell className="font-medium">
-                      <div className="flex items-center gap-2">
-                        <Building className="h-4 w-4 text-muted-foreground" />
-                        {license.company_name}
+        {/* Tabs for different sections */}
+        <Tabs defaultValue="licenses" className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="licenses">Licenses</TabsTrigger>
+            <TabsTrigger value="ip-logs">IP Logs ({ipLogs.length})</TabsTrigger>
+            <TabsTrigger value="blocked-ips">Blocked IPs ({blockedIPs.length})</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="licenses">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>All Licenses</CardTitle>
+                  <CardDescription>View and manage all active and inactive licenses</CardDescription>
+                </div>
+                <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+                  <DialogTrigger asChild>
+                    <Button>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add License
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Create New License</DialogTitle>
+                      <DialogDescription>
+                        Generate a new license with trial period and API key
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 mt-4">
+                      <div>
+                        <Label htmlFor="company">Company Name *</Label>
+                        <Input
+                          id="company"
+                          value={companyName}
+                          onChange={(e) => setCompanyName(e.target.value)}
+                          placeholder="Enter company name"
+                        />
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Key className="h-4 w-4 text-muted-foreground" />
-                        <code className="text-xs bg-muted px-2 py-1 rounded">{license.license_key}</code>
+                      <div>
+                        <Label htmlFor="expiry">Expiry Date *</Label>
+                        <Input
+                          id="expiry"
+                          type="datetime-local"
+                          value={expiryDate}
+                          onChange={(e) => setExpiryDate(e.target.value)}
+                        />
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      <code className="text-xs bg-muted px-2 py-1 rounded">{license.api_key.substring(0, 20)}...</code>
-                    </TableCell>
-                    <TableCell>{getStatusBadge(license.status)}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2 text-sm">
-                        <Calendar className="h-4 w-4 text-muted-foreground" />
-                        {new Date(license.created_at).toLocaleDateString()}
+                      <div>
+                        <Label htmlFor="status">Initial Status</Label>
+                        <Select value={status} onValueChange={(v) => setStatus(v as 'active' | 'trial')}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="trial">Trial</SelectItem>
+                            <SelectItem value="active">Active</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2 text-sm">
-                        <Calendar className="h-4 w-4 text-muted-foreground" />
-                        {new Date(license.expiry_date).toLocaleDateString()}
+                      <div>
+                        <Label htmlFor="notes">Notes</Label>
+                        <Textarea
+                          id="notes"
+                          value={notes}
+                          onChange={(e) => setNotes(e.target.value)}
+                          placeholder="Additional notes..."
+                          rows={3}
+                        />
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        {license.status !== 'suspended' && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleSuspendLicense(license.id)}
-                          >
-                            <Ban className="h-4 w-4" />
-                          </Button>
-                        )}
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => handleDeleteLicense(license.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                      <Button onClick={handleCreateLicense} className="w-full">
+                        Create License
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Company</TableHead>
+                      <TableHead>License Key</TableHead>
+                      <TableHead>API Key</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Created</TableHead>
+                      <TableHead>Expires</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {licenses.map((license) => (
+                      <TableRow key={license.id}>
+                        <TableCell className="font-medium">
+                          <div className="flex items-center gap-2">
+                            <Building className="h-4 w-4 text-muted-foreground" />
+                            {license.company_name}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Key className="h-4 w-4 text-muted-foreground" />
+                            <code className="text-xs bg-muted px-2 py-1 rounded">{license.license_key}</code>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <code className="text-xs bg-muted px-2 py-1 rounded">{license.api_key.substring(0, 20)}...</code>
+                        </TableCell>
+                        <TableCell>{getStatusBadge(license.status)}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2 text-sm">
+                            <Calendar className="h-4 w-4 text-muted-foreground" />
+                            {new Date(license.created_at).toLocaleDateString()}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2 text-sm">
+                            <Calendar className="h-4 w-4 text-muted-foreground" />
+                            {new Date(license.expiry_date).toLocaleDateString()}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            {license.status !== 'suspended' && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleSuspendLicense(license.id)}
+                              >
+                                <Ban className="h-4 w-4" />
+                              </Button>
+                            )}
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => handleDeleteLicense(license.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="ip-logs">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Globe className="h-5 w-5" />
+                  IP Access Logs
+                </CardTitle>
+                <CardDescription>Monitor all access attempts with IP addresses</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="max-h-[600px] overflow-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>IP Address</TableHead>
+                        <TableHead>License Key</TableHead>
+                        <TableHead>Action</TableHead>
+                        <TableHead>User Agent</TableHead>
+                        <TableHead>Timestamp</TableHead>
+                        <TableHead>Block</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {ipLogs.map((log) => (
+                        <TableRow key={log.id}>
+                          <TableCell className="font-mono text-sm">{log.ip_address}</TableCell>
+                          <TableCell>
+                            {log.license_key ? (
+                              <code className="text-xs bg-muted px-2 py-1 rounded">{log.license_key}</code>
+                            ) : (
+                              <span className="text-muted-foreground">-</span>
+                            )}
+                          </TableCell>
+                          <TableCell>{getActionBadge(log.action)}</TableCell>
+                          <TableCell className="max-w-[200px] truncate text-xs text-muted-foreground">
+                            {log.user_agent || '-'}
+                          </TableCell>
+                          <TableCell className="text-sm">
+                            {new Date(log.created_at).toLocaleString()}
+                          </TableCell>
+                          <TableCell>
+                            {!blockedIPs.some(b => b.ip_address === log.ip_address) && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleQuickBlockIP(log.ip_address)}
+                              >
+                                <ShieldBan className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="blocked-ips">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <ShieldBan className="h-5 w-5" />
+                    Blocked IP Addresses
+                  </CardTitle>
+                  <CardDescription>Manage blocked IP addresses</CardDescription>
+                </div>
+                <Dialog open={showBlockDialog} onOpenChange={setShowBlockDialog}>
+                  <DialogTrigger asChild>
+                    <Button variant="destructive">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Block IP
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Block IP Address</DialogTitle>
+                      <DialogDescription>
+                        Block an IP address from accessing the application
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 mt-4">
+                      <div>
+                        <Label htmlFor="ip">IP Address *</Label>
+                        <Input
+                          id="ip"
+                          value={blockIPAddress}
+                          onChange={(e) => setBlockIPAddress(e.target.value)}
+                          placeholder="e.g., 192.168.1.1"
+                        />
                       </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+                      <div>
+                        <Label htmlFor="reason">Reason</Label>
+                        <Textarea
+                          id="reason"
+                          value={blockReason}
+                          onChange={(e) => setBlockReason(e.target.value)}
+                          placeholder="Reason for blocking..."
+                          rows={2}
+                        />
+                      </div>
+                      <Button onClick={handleBlockIP} variant="destructive" className="w-full">
+                        Block IP Address
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>IP Address</TableHead>
+                      <TableHead>Reason</TableHead>
+                      <TableHead>Blocked At</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {blockedIPs.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                          No blocked IP addresses
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      blockedIPs.map((ip) => (
+                        <TableRow key={ip.id}>
+                          <TableCell className="font-mono">{ip.ip_address}</TableCell>
+                          <TableCell>{ip.reason || '-'}</TableCell>
+                          <TableCell>{new Date(ip.created_at).toLocaleString()}</TableCell>
+                          <TableCell>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleUnblockIP(ip.id)}
+                            >
+                              <CheckCircle className="h-4 w-4 mr-2" />
+                              Unblock
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

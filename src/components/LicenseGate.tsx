@@ -19,6 +19,7 @@ export const LicenseGate = ({ children }: LicenseGateProps) => {
     expiry_date: string;
   } | null>(null);
   const [logoutCountdown, setLogoutCountdown] = useState<number | null>(null);
+  const [isBlocked, setIsBlocked] = useState(false);
 
   useEffect(() => {
     checkStoredLicense();
@@ -94,6 +95,15 @@ export const LicenseGate = ({ children }: LicenseGateProps) => {
         setLogoutCountdown(null);
         return true;
       } else {
+        // Check if IP is blocked
+        if (data.blocked) {
+          setIsBlocked(true);
+          setIsLicenseValid(false);
+          setLicenseInfo(null);
+          localStorage.removeItem("app_license");
+          return false;
+        }
+        
         // License is invalid/suspended - start 5-second countdown
         if (isLicenseValid) {
           // Only show countdown if we were previously valid (to avoid showing on initial load)
@@ -137,6 +147,22 @@ export const LicenseGate = ({ children }: LicenseGateProps) => {
               <Shield className="h-12 w-12 text-primary animate-pulse" />
             </div>
             <CardTitle className="text-2xl">Validating License...</CardTitle>
+          </CardHeader>
+        </Card>
+      </div>
+    );
+  }
+
+  if (isBlocked) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <Card className="w-full max-w-md border-destructive">
+          <CardHeader className="space-y-1 text-center">
+            <div className="flex justify-center mb-4">
+              <AlertTriangle className="h-12 w-12 text-destructive" />
+            </div>
+            <CardTitle className="text-2xl text-destructive">Access Denied</CardTitle>
+            <CardDescription>Your access has been blocked. Please contact your administrator.</CardDescription>
           </CardHeader>
         </Card>
       </div>
