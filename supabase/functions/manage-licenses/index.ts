@@ -208,36 +208,13 @@ serve(async (req) => {
       });
     }
 
-    // All other actions require authentication
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    // All other actions require admin authentication via secret
+    const adminSecret = data.admin_secret;
+    const VALID_ADMIN_SECRET = 'ADMIN_XY_W_SECRET_2024';
     
-    if (authError || !user) {
+    if (adminSecret !== VALID_ADMIN_SECRET) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    // Check if user is admin
-    const { data: userRole } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .eq('role', 'admin')
-      .single();
-
-    if (!userRole) {
-      return new Response(JSON.stringify({ error: 'Forbidden - Admin access required' }), {
-        status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -381,7 +358,7 @@ serve(async (req) => {
           .insert({
             ip_address: data.ip_address,
             reason: data.reason || 'Blocked by admin',
-            blocked_by: user.id,
+            blocked_by: null,
           })
           .select()
           .single();
