@@ -23,7 +23,7 @@ const AdminLogin = () => {
     // Small delay to simulate authentication
     await new Promise(resolve => setTimeout(resolve, 500));
 
-    if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
+    if (username.toUpperCase().trim() === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
       // Store admin session
       sessionStorage.setItem("admin_authenticated", "true");
       toast.success("Welcome, Admin!");
