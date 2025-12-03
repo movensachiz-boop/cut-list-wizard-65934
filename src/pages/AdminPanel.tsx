@@ -40,6 +40,10 @@ interface IPLog {
   user_agent: string | null;
   action: string;
   created_at: string;
+  country: string | null;
+  city: string | null;
+  region: string | null;
+  isp: string | null;
 }
 
 interface BlockedIP {
@@ -556,7 +560,7 @@ const AdminPanel = () => {
                   <Globe className="h-5 w-5" />
                   IP Access Logs
                 </CardTitle>
-                <CardDescription>Monitor all access attempts with IP addresses</CardDescription>
+                <CardDescription>Monitor all access attempts with IP addresses and locations</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="max-h-[600px] overflow-auto">
@@ -564,9 +568,10 @@ const AdminPanel = () => {
                     <TableHeader>
                       <TableRow>
                         <TableHead>IP Address</TableHead>
+                        <TableHead>Location</TableHead>
                         <TableHead>License Key</TableHead>
                         <TableHead>Action</TableHead>
-                        <TableHead>User Agent</TableHead>
+                        <TableHead>ISP</TableHead>
                         <TableHead>Timestamp</TableHead>
                         <TableHead>Block</TableHead>
                       </TableRow>
@@ -575,6 +580,16 @@ const AdminPanel = () => {
                       {ipLogs.map((log) => (
                         <TableRow key={log.id}>
                           <TableCell className="font-mono text-sm">{log.ip_address}</TableCell>
+                          <TableCell className="text-sm">
+                            {log.city || log.country ? (
+                              <div className="flex flex-col">
+                                <span className="font-medium">{log.city || '-'}</span>
+                                <span className="text-xs text-muted-foreground">{log.region ? `${log.region}, ` : ''}{log.country || '-'}</span>
+                              </div>
+                            ) : (
+                              <span className="text-muted-foreground">-</span>
+                            )}
+                          </TableCell>
                           <TableCell>
                             {log.license_key ? (
                               <code className="text-xs bg-muted px-2 py-1 rounded">{log.license_key}</code>
@@ -583,8 +598,8 @@ const AdminPanel = () => {
                             )}
                           </TableCell>
                           <TableCell>{getActionBadge(log.action)}</TableCell>
-                          <TableCell className="max-w-[200px] truncate text-xs text-muted-foreground">
-                            {log.user_agent || '-'}
+                          <TableCell className="text-xs text-muted-foreground max-w-[150px] truncate">
+                            {log.isp || '-'}
                           </TableCell>
                           <TableCell className="text-sm">
                             {new Date(log.created_at).toLocaleString()}
