@@ -24,10 +24,10 @@ export const LicenseGate = ({ children }: LicenseGateProps) => {
   useEffect(() => {
     checkStoredLicense();
     
-    // Re-validate license every 30 seconds
+    // Re-validate license every 2 seconds to catch blocks quickly
     const interval = setInterval(() => {
       checkStoredLicense();
-    }, 30000);
+    }, 2000);
     
     return () => clearInterval(interval);
   }, []);
@@ -101,6 +101,15 @@ export const LicenseGate = ({ children }: LicenseGateProps) => {
           setIsLicenseValid(false);
           setLicenseInfo(null);
           localStorage.removeItem("app_license");
+          return false;
+        }
+        
+        // Check if in grace period (5-second countdown before block)
+        if (data.grace_period) {
+          if (logoutCountdown === null) {
+            toast.error(data.reason ? `Access revoked: ${data.reason}` : "Your access is being revoked");
+          }
+          setLogoutCountdown(data.seconds_remaining || 5);
           return false;
         }
         

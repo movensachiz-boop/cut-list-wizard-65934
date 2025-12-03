@@ -107,8 +107,18 @@ serve(async (req) => {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           });
         }
-        // If less than 5 seconds, allow access (grace period)
-        console.log('IP blocked but in grace period:', clientIP, 'seconds:', secondsSinceBlocked);
+        // In grace period - return warning with seconds remaining
+        const secondsRemaining = Math.ceil(5 - secondsSinceBlocked);
+        console.log('IP blocked but in grace period:', clientIP, 'seconds remaining:', secondsRemaining);
+        return new Response(JSON.stringify({ 
+          valid: false, 
+          error: 'Your access is being revoked',
+          grace_period: true,
+          seconds_remaining: secondsRemaining,
+          reason: blockedIP.reason
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
       }
       
       if (!license_key) {
