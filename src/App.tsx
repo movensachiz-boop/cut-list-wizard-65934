@@ -8,6 +8,7 @@ import { LicenseGate } from "@/components/LicenseGate";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import AdminPanel from "./pages/AdminPanel";
+import AdminLogin from "./pages/AdminLogin";
 
 const queryClient = new QueryClient();
 
@@ -17,14 +18,21 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <LicenseGate>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/admin" element={<AdminPanel />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </LicenseGate>
+        <Routes>
+          {/* Admin routes - outside license gate */}
+          <Route path="/admin-login" element={<AdminLogin />} />
+          <Route path="/admin" element={<AdminPanel />} />
+          
+          {/* Main app routes - require license */}
+          <Route path="/" element={
+            <LicenseGate>
+              <Index />
+            </LicenseGate>
+          } />
+          
+          {/* Catch-all */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
