@@ -24,6 +24,32 @@ function getClientIP(req: Request): string {
   return 'unknown';
 }
 
+// Helper to get IP geolocation
+async function getIPLocation(ip: string): Promise<{ country?: string; city?: string; region?: string; isp?: string }> {
+  if (ip === 'unknown' || ip === '127.0.0.1' || ip === '::1') {
+    return { country: 'Local', city: 'Local', region: 'Local', isp: 'Local' };
+  }
+  
+  try {
+    // Using ip-api.com free tier (limited to 45 requests per minute)
+    const response = await fetch(`http://ip-api.com/json/${ip}?fields=status,country,city,regionName,isp`);
+    const data = await response.json();
+    
+    if (data.status === 'success') {
+      return {
+        country: data.country || null,
+        city: data.city || null,
+        region: data.regionName || null,
+        isp: data.isp || null
+      };
+    }
+  } catch (error) {
+    console.error('Geolocation lookup failed:', error);
+  }
+  
+  return {};
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -42,6 +68,9 @@ serve(async (req) => {
     if (action === 'validate') {
       const { license_key } = data;
       
+      // Get geolocation data for logging
+      const location = await getIPLocation(clientIP);
+      
       // Check if IP is blocked first
       const { data: blockedIP } = await supabase
         .from('blocked_ips')
@@ -51,12 +80,16 @@ serve(async (req) => {
 
       if (blockedIP) {
         console.log('Blocked IP attempted access:', clientIP);
-        // Log the blocked attempt
+        // Log the blocked attempt with location
         await supabase.from('ip_logs').insert({
           ip_address: clientIP,
           license_key: license_key || null,
           user_agent: userAgent,
-          action: 'blocked_attempt'
+          action: 'blocked_attempt',
+          country: location.country,
+          city: location.city,
+          region: location.region,
+          isp: location.isp
         });
         
         return new Response(JSON.stringify({ 
@@ -87,12 +120,16 @@ serve(async (req) => {
 
       if (error || !license) {
         console.log('License not found:', license_key);
-        // Log failed attempt
+        // Log failed attempt with location
         await supabase.from('ip_logs').insert({
           ip_address: clientIP,
           license_key: license_key,
           user_agent: userAgent,
-          action: 'invalid_license'
+          action: 'invalid_license',
+          country: location.country,
+          city: location.city,
+          region: location.region,
+          isp: location.isp
         });
         
         return new Response(JSON.stringify({ 
@@ -109,7 +146,11 @@ serve(async (req) => {
           ip_address: clientIP,
           license_key: license_key,
           user_agent: userAgent,
-          action: 'suspended_license'
+          action: 'suspended_license',
+          country: location.country,
+          city: location.city,
+          region: location.region,
+          isp: location.isp
         });
         
         return new Response(JSON.stringify({ 
@@ -129,7 +170,11 @@ serve(async (req) => {
           ip_address: clientIP,
           license_key: license_key,
           user_agent: userAgent,
-          action: 'expired_license'
+          action: 'expired_license',
+          country: location.country,
+          city: location.city,
+          region: location.region,
+          isp: location.isp
         });
         
         return new Response(JSON.stringify({ 
@@ -141,12 +186,16 @@ serve(async (req) => {
         });
       }
 
-      // License is valid - log successful access
+      // License is valid - log successful access with location
       await supabase.from('ip_logs').insert({
         ip_address: clientIP,
         license_key: license_key,
         user_agent: userAgent,
-        action: 'valid_access'
+        action: 'valid_access',
+        country: location.country,
+        city: location.city,
+        region: location.region,
+        isp: location.isp
       });
 
       return new Response(JSON.stringify({ 
