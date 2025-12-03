@@ -1,6 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,85 +7,33 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { toast } from "sonner";
 import { Shield, Loader2 } from "lucide-react";
 
+const ADMIN_USERNAME = "ENVOY HARRY";
+const ADMIN_PASSWORD = "FINANCE2014$";
+
 const AdminLogin = () => {
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [checkingAuth, setCheckingAuth] = useState(true);
   const navigate = useNavigate();
-
-  useEffect(() => {
-    // Check if already logged in as admin
-    const checkAuth = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (user) {
-        const { data: userRole } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', user.id)
-          .eq('role', 'admin')
-          .maybeSingle();
-
-        if (userRole) {
-          navigate('/admin');
-          return;
-        }
-      }
-      setCheckingAuth(false);
-    };
-
-    checkAuth();
-  }, [navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
-    try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+    // Small delay to simulate authentication
+    await new Promise(resolve => setTimeout(resolve, 500));
 
-      if (error) throw error;
-
-      // Check if user is admin
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (user) {
-        const { data: userRole } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', user.id)
-          .eq('role', 'admin')
-          .maybeSingle();
-
-        if (userRole) {
-          toast.success("Welcome, Admin!");
-          navigate('/admin');
-        } else {
-          await supabase.auth.signOut();
-          toast.error("Access denied - Admin privileges required");
-        }
-      }
-    } catch (error: any) {
-      toast.error(error.message || "Login failed");
-    } finally {
-      setLoading(false);
+    if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
+      // Store admin session
+      sessionStorage.setItem("admin_authenticated", "true");
+      toast.success("Welcome, Admin!");
+      navigate('/admin');
+    } else {
+      toast.error("Invalid username or password");
     }
+    
+    setLoading(false);
   };
-
-  if (checkingAuth) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center">
-          <Shield className="h-12 w-12 mx-auto mb-4 text-primary animate-pulse" />
-          <p className="text-muted-foreground">Checking authentication...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
@@ -101,13 +48,13 @@ const AdminLogin = () => {
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="username">Username</Label>
               <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@example.com"
+                id="username"
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Enter username"
                 required
               />
             </div>

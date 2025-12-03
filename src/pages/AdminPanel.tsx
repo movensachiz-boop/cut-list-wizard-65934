@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Shield, Plus, Ban, Trash2, Key, Calendar, Building, Activity, Globe, ShieldBan, CheckCircle } from "lucide-react";
+import { Shield, Plus, Ban, Trash2, Key, Calendar, Building, Activity, Globe, ShieldBan, CheckCircle, LogOut } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -54,6 +55,7 @@ interface BlockedIP {
 }
 
 const AdminPanel = () => {
+  const navigate = useNavigate();
   const [licenses, setLicenses] = useState<License[]>([]);
   const [stats, setStats] = useState<Stats>({ total: 0, active: 0, trial: 0, suspended: 0, expired: 0 });
   const [loading, setLoading] = useState(true);
@@ -77,27 +79,19 @@ const AdminPanel = () => {
     checkAdminAndLoadData();
   }, []);
 
+  const handleLogout = () => {
+    sessionStorage.removeItem("admin_authenticated");
+    toast.success("Logged out successfully");
+    navigate('/admin-login');
+  };
+
   const checkAdminAndLoadData = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      // Check for simple session-based admin auth
+      const isAuthenticated = sessionStorage.getItem("admin_authenticated") === "true";
       
-      if (!user) {
-        toast.error("Please login first");
-        return;
-      }
-
-      // Check if user is admin
-      const { data: userRole } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id)
-        .eq('role', 'admin')
-        .maybeSingle();
-
-      if (!userRole) {
-        toast.error("Access denied - Admin only");
-        setIsAdmin(false);
-        setLoading(false);
+      if (!isAuthenticated) {
+        navigate('/admin-login');
         return;
       }
 
@@ -359,6 +353,10 @@ const AdminPanel = () => {
             </h1>
             <p className="text-muted-foreground mt-1">Manage licenses, monitor usage, and control IP access</p>
           </div>
+          <Button variant="outline" onClick={handleLogout}>
+            <LogOut className="h-4 w-4 mr-2" />
+            Logout
+          </Button>
         </div>
 
         {/* Stats Cards */}
