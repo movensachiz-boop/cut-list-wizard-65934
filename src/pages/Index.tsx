@@ -1311,7 +1311,7 @@ const Index = () => {
             </a>
           </div>
           <p className="text-xs text-muted-foreground mt-2">
-            DATAPLEX PROPERTIES
+            © DATAPLEX PROPERTIES
           </p>
         </div>
       </div>
