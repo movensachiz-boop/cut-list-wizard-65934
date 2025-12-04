@@ -43,7 +43,7 @@ export const HeroSection = () => {
           </span>
         </div>
         <p className="text-sm text-muted-foreground/70 font-semibold tracking-wide">
-          DATAPLEX PROPERTIES
+          © DATAPLEX PROPERTIES
         </p>
         
         <Link 
