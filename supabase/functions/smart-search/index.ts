@@ -141,7 +141,45 @@ serve(async (req) => {
       
       const lowerQuery = query.toLowerCase().trim();
       
-      // Special case: if query is "color" or "colour", prioritize "Color Board [TBA]"
+      // Check for specific color names BEFORE checking for generic "color" keyword
+      const specificColors = [
+        { keywords: ['storm grey', 'storm gray', 'stormgrey', 'stormgray'], matches: ['Storm grey matt', 'Storm grey gloss'] },
+        { keywords: ['grigio'], matches: ['Grigio Matt', 'Grigio'] },
+        { keywords: ['folkstone', 'folk stone'], matches: ['Folkstone Grey Matt Board', 'Folkstone Grey Gloss'] },
+        { keywords: ['dunblane'], matches: ['Dunblane Grey Matt Board'] },
+        { keywords: ['congo'], matches: ['Congo Matt'] },
+        { keywords: ['cappuccino', 'capuccino', 'cappucino'], matches: ['Capuccino Board Matt', 'Capuccino Gloss'] },
+        { keywords: ['petrol blue', 'petrol'], matches: ['Petrol Blue'] },
+        { keywords: ['black matt', 'black mat'], matches: ['Black Matt', 'Black Board Matt'] },
+        { keywords: ['black cherry'], matches: ['Black Cherry board'] },
+        { keywords: ['harvard cherry'], matches: ['Harvard Cherry Board'] },
+        { keywords: ['natural oak'], matches: ['Natural Oak Matt'] },
+        { keywords: ['shale oak', 'shale'], matches: ['Shale Oak', 'Washed Shale'] },
+        { keywords: ['brookhill'], matches: ['Brookhill Matt'] },
+        { keywords: ['sahara'], matches: ['Sahara Board Matt'] },
+        { keywords: ['coimbra'], matches: ['Coimbra Board Matt'] },
+        { keywords: ['camden'], matches: ['Camden Board Matt'] },
+        { keywords: ['cascade'], matches: ['Cascade Board Matt'] },
+        { keywords: ['american walnut'], matches: ['American Walnut'] },
+        { keywords: ['royal mahogany'], matches: ['Royal Mahogany'] },
+        { keywords: ['iceberg'], matches: ['Iceberg white-Gloss'] },
+      ];
+      
+      for (const colorMatch of specificColors) {
+        if (colorMatch.keywords.some(kw => lowerQuery.includes(kw))) {
+          return new Response(
+            JSON.stringify({ 
+              success: true,
+              matches: colorMatch.matches,
+              query,
+              category
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      }
+      
+      // Only use "Color Board [TBA]" if query is EXACTLY "color" or "colour" (no other words)
       if (lowerQuery === 'color' || lowerQuery === 'colour') {
         return new Response(
           JSON.stringify({ 
