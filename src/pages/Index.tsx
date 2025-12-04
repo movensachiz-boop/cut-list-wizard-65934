@@ -1287,7 +1287,7 @@ const Index = () => {
         )}
 
         {/* Footer Credit */}
-        <div className="mt-8 text-center">
+        <div className="mt-8 text-center space-y-2">
           <p className="text-sm text-muted-foreground">
             Assistance{" "}
             <a 
@@ -1296,6 +1296,18 @@ const Index = () => {
             >
               +263 786133259
             </a>
+          </p>
+          <div className="flex justify-center gap-4 text-xs text-muted-foreground">
+            <a href="/terms" className="hover:text-accent transition-colors underline">
+              Terms of Service
+            </a>
+            <span>|</span>
+            <a href="/privacy" className="hover:text-accent transition-colors underline">
+              Privacy Policy
+            </a>
+          </div>
+          <p className="text-xs text-muted-foreground mt-2">
+            DATAPLEX PROPERTIES
           </p>
         </div>
       </div>
