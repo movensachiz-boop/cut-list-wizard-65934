@@ -93,7 +93,6 @@ class GuillotinePacker {
       if (rect.width >= adjustedWidth && rect.height >= adjustedHeight) {
         return true;
       }
-      // Check rotation with grain constraints
       if (allowRotation && this.canRotate(part) && rect.width >= adjustedHeight && rect.height >= adjustedWidth) {
         return true;
       }
@@ -102,11 +101,9 @@ class GuillotinePacker {
   }
 
   private canRotate(part: Part): boolean {
-    // If no grain direction specified, rotation is allowed
     if (!part.grainDirection || part.grainDirection === 'any') {
       return true;
     }
-    // Cannot rotate if grain direction is specified
     return false;
   }
 
@@ -114,29 +111,33 @@ class GuillotinePacker {
     const adjustedWidth = part.width + this.kerf;
     const adjustedHeight = part.height + this.kerf;
 
-    // Find best fitting rectangle using Best Area Fit
+    // Try multiple fit heuristics and pick best
     let bestRect: Rectangle | null = null;
-    let bestAreaFit = Infinity;
+    let bestScore = Infinity;
     let rotated = false;
 
     const canRotatePart = allowRotation && this.canRotate(part);
 
     for (const rect of this.freeRects) {
-      // Try normal orientation
+      // Try normal orientation - use Best Short Side Fit (minimizes leftover on shortest side)
       if (rect.width >= adjustedWidth && rect.height >= adjustedHeight) {
-        const areaFit = rect.width * rect.height - adjustedWidth * adjustedHeight;
-        if (areaFit < bestAreaFit) {
-          bestAreaFit = areaFit;
+        const leftoverH = rect.width - adjustedWidth;
+        const leftoverV = rect.height - adjustedHeight;
+        const score = Math.min(leftoverH, leftoverV); // Best Short Side Fit
+        if (score < bestScore) {
+          bestScore = score;
           bestRect = rect;
           rotated = false;
         }
       }
 
-      // Try rotated orientation (only if grain allows it)
+      // Try rotated orientation
       if (canRotatePart && rect.width >= adjustedHeight && rect.height >= adjustedWidth) {
-        const areaFit = rect.width * rect.height - adjustedHeight * adjustedWidth;
-        if (areaFit < bestAreaFit) {
-          bestAreaFit = areaFit;
+        const leftoverH = rect.width - adjustedHeight;
+        const leftoverV = rect.height - adjustedWidth;
+        const score = Math.min(leftoverH, leftoverV);
+        if (score < bestScore) {
+          bestScore = score;
           bestRect = rect;
           rotated = true;
         }
@@ -145,7 +146,6 @@ class GuillotinePacker {
 
     if (!bestRect) return null;
 
-    // Create placed part
     const placedPart: PlacedPart = {
       ...part,
       x: bestRect.x,
@@ -157,15 +157,12 @@ class GuillotinePacker {
     };
 
     this.usedRects.push(placedPart);
-
-    // Split the used rectangle using guillotine method
     this.splitFreeRect(bestRect, placedPart);
 
     return placedPart;
   }
 
   private splitFreeRect(freeRect: Rectangle, usedRect: PlacedPart): void {
-    // Remove the used rectangle from free rectangles
     const index = this.freeRects.indexOf(freeRect);
     if (index > -1) {
       this.freeRects.splice(index, 1);
@@ -174,78 +171,111 @@ class GuillotinePacker {
     const usedWidth = usedRect.width + this.kerf;
     const usedHeight = usedRect.height + this.kerf;
 
-    // Create two new rectangles using guillotine split
-    // Horizontal split
-    if (freeRect.width > usedWidth) {
-      this.freeRects.push({
-        x: freeRect.x + usedWidth,
-        y: freeRect.y,
-        width: freeRect.width - usedWidth,
-        height: freeRect.height,
-      });
+    // Calculate remaining space
+    const remainingRight = freeRect.width - usedWidth;
+    const remainingBottom = freeRect.height - usedHeight;
+
+    // Use Shorter Leftover Axis Split - split along the axis with less remaining space
+    // This tends to produce more usable rectangles
+    if (remainingRight <= remainingBottom) {
+      // Split horizontally first (shorter leftover on right)
+      if (remainingRight > 0) {
+        this.freeRects.push({
+          x: freeRect.x + usedWidth,
+          y: freeRect.y,
+          width: remainingRight,
+          height: freeRect.height, // Full height
+        });
+      }
+      if (remainingBottom > 0) {
+        this.freeRects.push({
+          x: freeRect.x,
+          y: freeRect.y + usedHeight,
+          width: usedWidth, // Only up to used width
+          height: remainingBottom,
+        });
+      }
+    } else {
+      // Split vertically first (shorter leftover on bottom)
+      if (remainingBottom > 0) {
+        this.freeRects.push({
+          x: freeRect.x,
+          y: freeRect.y + usedHeight,
+          width: freeRect.width, // Full width
+          height: remainingBottom,
+        });
+      }
+      if (remainingRight > 0) {
+        this.freeRects.push({
+          x: freeRect.x + usedWidth,
+          y: freeRect.y,
+          width: remainingRight,
+          height: usedHeight, // Only up to used height
+        });
+      }
     }
 
-    // Vertical split
-    if (freeRect.height > usedHeight) {
-      this.freeRects.push({
-        x: freeRect.x,
-        y: freeRect.y + usedHeight,
-        width: usedWidth,
-        height: freeRect.height - usedHeight,
-      });
-    }
-
-    // Merge adjacent rectangles to reduce fragmentation
     this.mergeFreeRects();
   }
 
   private mergeFreeRects(): void {
-    // Simple merge: combine rectangles that share edges
-    // Filter out rectangles that are too small to be useful (based on minLeftoverSize)
-    const minSize = 50; // Default minimum usable size if not specified
+    // Lower minimum size to 20mm to capture more usable space
+    const minSize = 20;
     this.freeRects = this.freeRects.filter(
       rect => rect.width >= minSize && rect.height >= minSize
     );
 
-    for (let i = 0; i < this.freeRects.length; i++) {
-      for (let j = i + 1; j < this.freeRects.length; j++) {
-        const rect1 = this.freeRects[i];
-        const rect2 = this.freeRects[j];
+    // Sort by area descending for better merge opportunities
+    this.freeRects.sort((a, b) => (b.width * b.height) - (a.width * a.height));
 
-        // Check if rectangles can be merged horizontally
-        if (rect1.y === rect2.y && rect1.height === rect2.height) {
-          if (rect1.x + rect1.width === rect2.x) {
-            rect1.width += rect2.width;
-            this.freeRects.splice(j, 1);
-            j--;
-            continue;
-          }
-          if (rect2.x + rect2.width === rect1.x) {
-            rect1.x = rect2.x;
-            rect1.width += rect2.width;
-            this.freeRects.splice(j, 1);
-            j--;
-            continue;
-          }
-        }
+    // Multiple merge passes for better results
+    for (let pass = 0; pass < 3; pass++) {
+      let merged = false;
+      for (let i = 0; i < this.freeRects.length; i++) {
+        for (let j = i + 1; j < this.freeRects.length; j++) {
+          const rect1 = this.freeRects[i];
+          const rect2 = this.freeRects[j];
 
-        // Check if rectangles can be merged vertically
-        if (rect1.x === rect2.x && rect1.width === rect2.width) {
-          if (rect1.y + rect1.height === rect2.y) {
-            rect1.height += rect2.height;
-            this.freeRects.splice(j, 1);
-            j--;
-            continue;
+          // Merge horizontally
+          if (rect1.y === rect2.y && rect1.height === rect2.height) {
+            if (rect1.x + rect1.width === rect2.x) {
+              rect1.width += rect2.width;
+              this.freeRects.splice(j, 1);
+              merged = true;
+              j--;
+              continue;
+            }
+            if (rect2.x + rect2.width === rect1.x) {
+              rect1.x = rect2.x;
+              rect1.width += rect2.width;
+              this.freeRects.splice(j, 1);
+              merged = true;
+              j--;
+              continue;
+            }
           }
-          if (rect2.y + rect2.height === rect1.y) {
-            rect1.y = rect2.y;
-            rect1.height += rect2.height;
-            this.freeRects.splice(j, 1);
-            j--;
-            continue;
+
+          // Merge vertically
+          if (rect1.x === rect2.x && rect1.width === rect2.width) {
+            if (rect1.y + rect1.height === rect2.y) {
+              rect1.height += rect2.height;
+              this.freeRects.splice(j, 1);
+              merged = true;
+              j--;
+              continue;
+            }
+            if (rect2.y + rect2.height === rect1.y) {
+              rect1.y = rect2.y;
+              rect1.height += rect2.height;
+              this.freeRects.splice(j, 1);
+              merged = true;
+              j--;
+              continue;
+            }
           }
         }
       }
+      if (!merged) break;
     }
   }
 
