@@ -277,125 +277,132 @@ export function optimizeSheetLayout(
       }))
     : parts;
 
-  // Expand parts by quantity
-  const expandedParts: Part[] = [];
+  // Group parts by material - each material gets its own sheets
+  const partsByMaterial: Record<string, Part[]> = {};
   adjustedParts.forEach(part => {
-    for (let i = 0; i < part.quantity; i++) {
-      expandedParts.push({ ...part, quantity: 1, id: `${part.id}-${i}` });
+    const material = part.material || 'Unknown';
+    if (!partsByMaterial[material]) {
+      partsByMaterial[material] = [];
     }
+    partsByMaterial[material].push(part);
   });
 
-  // Sort parts based on optimization mode
-  if (config.mode === 'precision') {
-    // Precision mode: Advanced sorting for minimal waste
-    expandedParts.sort((a, b) => {
-      // Prioritize by area, then by perimeter for better nesting
-      const areaA = a.width * a.height;
-      const areaB = b.width * b.height;
-      if (areaA !== areaB) return areaB - areaA;
-      return (b.width + b.height) - (a.width + a.height);
+  // Process each material group separately
+  Object.entries(partsByMaterial).forEach(([material, materialParts]) => {
+    // Expand parts by quantity for this material
+    const expandedParts: Part[] = [];
+    materialParts.forEach(part => {
+      for (let i = 0; i < part.quantity; i++) {
+        expandedParts.push({ ...part, quantity: 1, id: `${part.id}-${i}` });
+      }
     });
-  } else if (config.mode === 'balanced') {
-    // Balanced mode: Mix of area and longest dimension
-    expandedParts.sort((a, b) => {
-      const areaA = a.width * a.height;
-      const areaB = b.width * b.height;
-      if (Math.abs(areaA - areaB) > 10000) return areaB - areaA;
-      return Math.max(b.width, b.height) - Math.max(a.width, a.height);
-    });
-  } else {
-    // Fast mode: Simple area-based sorting
-    expandedParts.sort((a, b) => b.width * b.height - a.width * a.height);
-  }
 
-  let currentSheetIndex = 0;
-  let packer: GuillotinePacker | null = null;
+    // Sort parts based on optimization mode
+    if (config.mode === 'precision') {
+      expandedParts.sort((a, b) => {
+        const areaA = a.width * a.height;
+        const areaB = b.width * b.height;
+        if (areaA !== areaB) return areaB - areaA;
+        return (b.width + b.height) - (a.width + a.height);
+      });
+    } else if (config.mode === 'balanced') {
+      expandedParts.sort((a, b) => {
+        const areaA = a.width * a.height;
+        const areaB = b.width * b.height;
+        if (Math.abs(areaA - areaB) > 10000) return areaB - areaA;
+        return Math.max(b.width, b.height) - Math.max(a.width, a.height);
+      });
+    } else {
+      expandedParts.sort((a, b) => b.width * b.height - a.width * a.height);
+    }
 
-  for (const part of expandedParts) {
-    // Check if part fits on current sheet
-    if (!packer || !packer.canFit(part, config.allowRotation)) {
-      // Save current sheet if it exists
-      if (packer) {
-        const usedArea = packer.getUsedArea();
-        const totalArea = sheetSize.width * sheetSize.height;
-        const wastePercentage = ((totalArea - usedArea) / totalArea) * 100;
-        const placedParts = packer.getUsedRects();
-        const cutSequence = generateCutSequence(placedParts, sheetSize.width, sheetSize.height);
+    let currentSheetIndex = sheets.length;
+    let packer: GuillotinePacker | null = null;
 
-        // Calculate costs if provided
-        let costs;
-        if (config.costs) {
-          const totalCutLength = calculateTotalCutLength(cutSequence);
-          const totalEdgingLength = calculateTotalEdgingLength(placedParts);
-          
-          costs = {
-            materialCost: config.costs.materialCostPerSheet,
-            cuttingCost: (totalCutLength / 1000) * config.costs.cutCostPerMeter,
-            edgingCost: (totalEdgingLength / 1000) * config.costs.edgingCostPerMeter,
-            totalCost: 0,
-          };
-          costs.totalCost = costs.materialCost + costs.cuttingCost + costs.edgingCost;
+    for (const part of expandedParts) {
+      // Check if part fits on current sheet
+      if (!packer || !packer.canFit(part, config.allowRotation)) {
+        // Save current sheet if it exists
+        if (packer) {
+          const usedArea = packer.getUsedArea();
+          const totalArea = sheetSize.width * sheetSize.height;
+          const wastePercentage = ((totalArea - usedArea) / totalArea) * 100;
+          const placedParts = packer.getUsedRects();
+          const cutSequence = generateCutSequence(placedParts, sheetSize.width, sheetSize.height);
+
+          let costs;
+          if (config.costs) {
+            const totalCutLength = calculateTotalCutLength(cutSequence);
+            const totalEdgingLength = calculateTotalEdgingLength(placedParts);
+            
+            costs = {
+              materialCost: config.costs.materialCostPerSheet,
+              cuttingCost: (totalCutLength / 1000) * config.costs.cutCostPerMeter,
+              edgingCost: (totalEdgingLength / 1000) * config.costs.edgingCostPerMeter,
+              totalCost: 0,
+            };
+            costs.totalCost = costs.materialCost + costs.cuttingCost + costs.edgingCost;
+          }
+
+          sheets.push({
+            width: sheetSize.width,
+            height: sheetSize.height,
+            type: config.sheetType,
+            parts: placedParts,
+            wastePercentage,
+            usedArea,
+            cutSequence,
+            costs,
+          });
         }
 
-        sheets.push({
-          width: sheetSize.width,
-          height: sheetSize.height,
-          type: config.sheetType,
-          parts: placedParts,
-          wastePercentage,
-          usedArea,
-          cutSequence,
-          costs,
-        });
+        // Create new sheet for this material
+        currentSheetIndex = sheets.length;
+        packer = new GuillotinePacker(sheetSize.width, sheetSize.height, config.kerf);
       }
 
-      // Create new sheet
-      currentSheetIndex = sheets.length;
-      packer = new GuillotinePacker(sheetSize.width, sheetSize.height, config.kerf);
-    }
-
-    // Try to place part
-    const placed = packer.insert(part, currentSheetIndex, config.allowRotation);
-    
-    if (!placed) {
-      console.warn(`Could not place part ${part.id} - dimensions may exceed sheet size`);
-    }
-  }
-
-  // Save last sheet
-  if (packer) {
-    const usedArea = packer.getUsedArea();
-    const totalArea = sheetSize.width * sheetSize.height;
-    const wastePercentage = ((totalArea - usedArea) / totalArea) * 100;
-    const placedParts = packer.getUsedRects();
-    const cutSequence = generateCutSequence(placedParts, sheetSize.width, sheetSize.height);
-
-    // Calculate costs if provided
-    let costs;
-    if (config.costs) {
-      const totalCutLength = calculateTotalCutLength(cutSequence);
-      const totalEdgingLength = calculateTotalEdgingLength(placedParts);
+      // Try to place part
+      const placed = packer.insert(part, currentSheetIndex, config.allowRotation);
       
-      costs = {
-        materialCost: config.costs.materialCostPerSheet,
-        cuttingCost: (totalCutLength / 1000) * config.costs.cutCostPerMeter,
-        edgingCost: (totalEdgingLength / 1000) * config.costs.edgingCostPerMeter,
-        totalCost: 0,
-      };
-      costs.totalCost = costs.materialCost + costs.cuttingCost + costs.edgingCost;
+      if (!placed) {
+        console.warn(`Could not place part ${part.id} (${material}) - dimensions may exceed sheet size`);
+      }
     }
 
-    sheets.push({
-      width: sheetSize.width,
-      height: sheetSize.height,
-      type: config.sheetType,
-      parts: placedParts,
-      wastePercentage,
-      usedArea,
-      cutSequence,
-      costs,
-    });
-  }
+    // Save last sheet for this material
+    if (packer) {
+      const usedArea = packer.getUsedArea();
+      const totalArea = sheetSize.width * sheetSize.height;
+      const wastePercentage = ((totalArea - usedArea) / totalArea) * 100;
+      const placedParts = packer.getUsedRects();
+      const cutSequence = generateCutSequence(placedParts, sheetSize.width, sheetSize.height);
+
+      let costs;
+      if (config.costs) {
+        const totalCutLength = calculateTotalCutLength(cutSequence);
+        const totalEdgingLength = calculateTotalEdgingLength(placedParts);
+        
+        costs = {
+          materialCost: config.costs.materialCostPerSheet,
+          cuttingCost: (totalCutLength / 1000) * config.costs.cutCostPerMeter,
+          edgingCost: (totalEdgingLength / 1000) * config.costs.edgingCostPerMeter,
+          totalCost: 0,
+        };
+        costs.totalCost = costs.materialCost + costs.cuttingCost + costs.edgingCost;
+      }
+
+      sheets.push({
+        width: sheetSize.width,
+        height: sheetSize.height,
+        type: config.sheetType,
+        parts: placedParts,
+        wastePercentage,
+        usedArea,
+        cutSequence,
+        costs,
+      });
+    }
+  });
 
   return sheets;
 }
