@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Shield, Plus, Ban, Trash2, Key, Calendar, Building, Activity, Globe, ShieldBan, CheckCircle, LogOut } from "lucide-react";
+import { Shield, Plus, Ban, Trash2, Key, Calendar, Building, Activity, Globe, ShieldBan, CheckCircle, LogOut, Megaphone } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -54,6 +54,17 @@ interface BlockedIP {
   created_at: string;
 }
 
+interface Announcement {
+  id: string;
+  title: string;
+  content: string;
+  type: 'info' | 'warning' | 'success' | 'promo';
+  is_active: boolean;
+  priority: number;
+  created_at: string;
+  expires_at: string | null;
+}
+
 const AdminPanel = () => {
   const navigate = useNavigate();
   const [licenses, setLicenses] = useState<License[]>([]);
@@ -62,6 +73,14 @@ const AdminPanel = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showBlockDialog, setShowBlockDialog] = useState(false);
+  const [showAnnouncementDialog, setShowAnnouncementDialog] = useState(false);
+  
+  // Announcements state
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [announcementTitle, setAnnouncementTitle] = useState("");
+  const [announcementContent, setAnnouncementContent] = useState("");
+  const [announcementType, setAnnouncementType] = useState<'info' | 'warning' | 'success' | 'promo'>('info');
+  const [announcementPriority, setAnnouncementPriority] = useState(0);
   
   // IP tracking state
   const [ipLogs, setIPLogs] = useState<IPLog[]>([]);
@@ -96,7 +115,7 @@ const AdminPanel = () => {
       }
 
       setIsAdmin(true);
-      await Promise.all([loadLicenses(), loadStats(), loadIPLogs(), loadBlockedIPs()]);
+      await Promise.all([loadLicenses(), loadStats(), loadIPLogs(), loadBlockedIPs(), loadAnnouncements()]);
     } catch (error) {
       console.error('Error checking admin status:', error);
       toast.error("Failed to verify admin access");
@@ -144,6 +163,85 @@ const AdminPanel = () => {
       setIPLogs(data.logs || []);
     } catch (error) {
       console.error('Error loading IP logs:', error);
+    }
+  };
+
+  const loadAnnouncements = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("announcements")
+        .select("*")
+        .order("priority", { ascending: false })
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      const typedData = (data || []).map(item => ({
+        ...item,
+        type: item.type as 'info' | 'warning' | 'success' | 'promo'
+      }));
+      setAnnouncements(typedData);
+    } catch (error) {
+      console.error('Error loading announcements:', error);
+    }
+  };
+
+  const handleCreateAnnouncement = async () => {
+    if (!announcementTitle || !announcementContent) {
+      toast.error("Please fill in title and content");
+      return;
+    }
+
+    try {
+      const { error } = await supabase.from("announcements").insert({
+        title: announcementTitle,
+        content: announcementContent,
+        type: announcementType,
+        priority: announcementPriority,
+        is_active: true
+      });
+
+      if (error) throw error;
+
+      toast.success("Announcement created");
+      setShowAnnouncementDialog(false);
+      setAnnouncementTitle("");
+      setAnnouncementContent("");
+      setAnnouncementType("info");
+      setAnnouncementPriority(0);
+      await loadAnnouncements();
+    } catch (error) {
+      console.error('Error creating announcement:', error);
+      toast.error("Failed to create announcement");
+    }
+  };
+
+  const handleToggleAnnouncement = async (id: string, currentActive: boolean) => {
+    try {
+      const { error } = await supabase
+        .from("announcements")
+        .update({ is_active: !currentActive })
+        .eq("id", id);
+
+      if (error) throw error;
+      toast.success(currentActive ? "Announcement hidden" : "Announcement shown");
+      await loadAnnouncements();
+    } catch (error) {
+      console.error('Error toggling announcement:', error);
+      toast.error("Failed to update announcement");
+    }
+  };
+
+  const handleDeleteAnnouncement = async (id: string) => {
+    if (!confirm("Delete this announcement?")) return;
+
+    try {
+      const { error } = await supabase.from("announcements").delete().eq("id", id);
+      if (error) throw error;
+      toast.success("Announcement deleted");
+      await loadAnnouncements();
+    } catch (error) {
+      console.error('Error deleting announcement:', error);
+      toast.error("Failed to delete announcement");
     }
   };
 
@@ -409,6 +507,7 @@ const AdminPanel = () => {
         <Tabs defaultValue="licenses" className="space-y-4">
           <TabsList>
             <TabsTrigger value="licenses">Licenses</TabsTrigger>
+            <TabsTrigger value="announcements">Announcements ({announcements.length})</TabsTrigger>
             <TabsTrigger value="ip-logs">IP Logs ({ipLogs.length})</TabsTrigger>
             <TabsTrigger value="blocked-ips">Blocked IPs ({blockedIPs.length})</TabsTrigger>
           </TabsList>
@@ -548,6 +647,142 @@ const AdminPanel = () => {
                         </TableCell>
                       </TableRow>
                     ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="announcements">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Megaphone className="h-5 w-5" />
+                    App Announcements
+                  </CardTitle>
+                  <CardDescription>Create and manage news and announcements shown to users</CardDescription>
+                </div>
+                <Dialog open={showAnnouncementDialog} onOpenChange={setShowAnnouncementDialog}>
+                  <DialogTrigger asChild>
+                    <Button>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Announcement
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Create Announcement</DialogTitle>
+                      <DialogDescription>
+                        Create a new announcement to display in the app
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 mt-4">
+                      <div>
+                        <Label htmlFor="ann-title">Title *</Label>
+                        <Input
+                          id="ann-title"
+                          value={announcementTitle}
+                          onChange={(e) => setAnnouncementTitle(e.target.value)}
+                          placeholder="Announcement title"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="ann-content">Content *</Label>
+                        <Textarea
+                          id="ann-content"
+                          value={announcementContent}
+                          onChange={(e) => setAnnouncementContent(e.target.value)}
+                          placeholder="Announcement content..."
+                          rows={3}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="ann-type">Type</Label>
+                        <Select value={announcementType} onValueChange={(v) => setAnnouncementType(v as any)}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="info">Info</SelectItem>
+                            <SelectItem value="success">Success</SelectItem>
+                            <SelectItem value="warning">Warning</SelectItem>
+                            <SelectItem value="promo">Promo</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label htmlFor="ann-priority">Priority (higher = top)</Label>
+                        <Input
+                          id="ann-priority"
+                          type="number"
+                          value={announcementPriority}
+                          onChange={(e) => setAnnouncementPriority(parseInt(e.target.value) || 0)}
+                        />
+                      </div>
+                      <Button onClick={handleCreateAnnouncement} className="w-full">
+                        Create Announcement
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Title</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Priority</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Created</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {announcements.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                          No announcements yet
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      announcements.map((ann) => (
+                        <TableRow key={ann.id}>
+                          <TableCell className="font-medium">{ann.title}</TableCell>
+                          <TableCell>
+                            <Badge variant={ann.type === 'warning' ? 'destructive' : ann.type === 'success' ? 'secondary' : 'default'}>
+                              {ann.type}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{ann.priority}</TableCell>
+                          <TableCell>
+                            <Badge variant={ann.is_active ? 'default' : 'secondary'}>
+                              {ann.is_active ? 'Active' : 'Hidden'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{new Date(ann.created_at).toLocaleDateString()}</TableCell>
+                          <TableCell>
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleToggleAnnouncement(ann.id, ann.is_active)}
+                              >
+                                {ann.is_active ? 'Hide' : 'Show'}
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => handleDeleteAnnouncement(ann.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
                   </TableBody>
                 </Table>
               </CardContent>

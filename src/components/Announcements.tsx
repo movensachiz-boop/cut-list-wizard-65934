@@ -57,7 +57,12 @@ export const Announcements = () => {
           .order("created_at", { ascending: false });
 
         if (error) throw error;
-        setAnnouncements(data || []);
+        // Cast type field to proper union type
+        const typedData = (data || []).map(item => ({
+          ...item,
+          type: item.type as "info" | "warning" | "success" | "promo"
+        }));
+        setAnnouncements(typedData);
       } catch (error) {
         console.error("Error fetching announcements:", error);
       } finally {
