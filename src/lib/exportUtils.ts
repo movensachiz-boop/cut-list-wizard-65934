@@ -217,7 +217,9 @@ export function exportSheetLayoutToPDF(sheets: Sheet[], jobName: string = 'layou
 
 function generatePrintableHTML(sheets: Sheet[], jobName: string): string {
   const stats = calculateTotalStats(sheets);
-  const scale = 0.35; // Scale to fit 2 sheets side by side on A4 landscape
+  // A4 landscape is ~277mm x 190mm printable. For 2 sheets side by side with gaps, each sheet max ~130mm wide
+  // Standard sheet is 2750x1830mm, so scale = 130/2750 ≈ 0.047
+  const scale = 0.13; // Smaller scale to fit 2 full sheets on A4 landscape
   
   // Group sheets into pairs (2 per page)
   let pagesHTML = '';
@@ -245,7 +247,7 @@ function generatePrintableHTML(sheets: Sheet[], jobName: string): string {
               if (edges.left) edgingLines += `<line x1="${part.x * scale}" y1="${part.y * scale}" x2="${part.x * scale}" y2="${(part.y + part.height) * scale}" stroke="#22c55e" stroke-width="2"/>`;
               if (edges.right) edgingLines += `<line x1="${(part.x + part.width) * scale}" y1="${part.y * scale}" x2="${(part.x + part.width) * scale}" y2="${(part.y + part.height) * scale}" stroke="#22c55e" stroke-width="2"/>`;
               
-              const fontSize = Math.min(part.width * scale * 0.12, part.height * scale * 0.15, 9);
+              const fontSize = Math.min(part.width * scale * 0.15, part.height * scale * 0.2, 8);
               
               return `
                 <rect x="${part.x * scale}" y="${part.y * scale}" width="${part.width * scale}" height="${part.height * scale}" fill="hsl(${hue}, 70%, 85%)" stroke="hsl(${hue}, 70%, 40%)" stroke-width="1"/>
@@ -267,20 +269,18 @@ function generatePrintableHTML(sheets: Sheet[], jobName: string): string {
     <head>
       <title>Fast Cut - ${jobName}</title>
       <style>
-        @page { size: A4 landscape; margin: 8mm; }
-        body { font-family: Arial, sans-serif; margin: 0; padding: 0; font-size: 10px; }
-        .page { page-break-after: always; padding: 8px; height: calc(100vh - 16px); box-sizing: border-box; }
+        @page { size: A4 landscape; margin: 5mm; }
+        * { box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 5px; font-size: 9px; }
+        .page { page-break-after: always; padding: 5px; }
         .page:last-child { page-break-after: auto; }
-        .header { text-align: center; margin-bottom: 5px; }
-        .header h1 { font-size: 14px; margin: 0; }
-        .header .info { font-size: 9px; color: #666; }
-        .sheets-row { display: flex; justify-content: space-around; align-items: flex-start; gap: 15px; height: calc(100% - 30px); }
-        .sheet-item { border: 1px solid #ccc; padding: 5px; background: #fff; flex: 0 0 auto; }
-        .sheet-header { font-size: 10px; font-weight: bold; margin-bottom: 4px; text-align: center; }
-        .sheet-svg { display: block; }
-        @media print {
-          .page { height: auto; min-height: 100vh; }
-        }
+        .header { text-align: center; margin-bottom: 8px; }
+        .header h1 { font-size: 12px; margin: 0 0 3px 0; }
+        .header .info { font-size: 8px; color: #666; }
+        .sheets-row { display: flex; justify-content: center; align-items: flex-start; gap: 20px; }
+        .sheet-item { border: 1px solid #999; padding: 4px; background: #fff; }
+        .sheet-header { font-size: 9px; font-weight: bold; margin-bottom: 3px; text-align: center; }
+        .sheet-svg { display: block; max-width: 100%; }
       </style>
     </head>
     <body>
