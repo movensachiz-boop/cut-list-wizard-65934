@@ -217,91 +217,33 @@ export function exportSheetLayoutToPDF(sheets: Sheet[], jobName: string = 'layou
 
 function generatePrintableHTML(sheets: Sheet[], jobName: string): string {
   const stats = calculateTotalStats(sheets);
+  const scale = 0.2; // Smaller scale to fit more per page
   
-  let partsHTML = '';
+  // Group sheets into rows (2 sheets per row for landscape A4)
+  let partsHTML = '<div class="sheets-grid">';
+  
   sheets.forEach((sheet, sheetIndex) => {
-    const scale = 0.4;
-    
     partsHTML += `
-      <div class="sheet-page">
-        <h2>Sheet ${sheetIndex + 1} - ${sheet.type.toUpperCase()}</h2>
-        <p>Dimensions: ${sheet.width} × ${sheet.height} mm | Waste: ${sheet.wastePercentage.toFixed(1)}%</p>
-        
-        <svg width="${sheet.width * scale}" height="${sheet.height * scale}" style="border: 2px solid #333; background: #f9f9f9;">
+      <div class="sheet-item">
+        <div class="sheet-header">Sheet ${sheetIndex + 1} - ${sheet.type.toUpperCase()} (${sheet.wastePercentage.toFixed(1)}% waste)</div>
+        <svg width="${sheet.width * scale}" height="${sheet.height * scale}" class="sheet-svg">
+          <rect x="0" y="0" width="${sheet.width * scale}" height="${sheet.height * scale}" fill="#f5f5f5" stroke="#333" stroke-width="1"/>
           ${sheet.parts.map((part, partIndex) => {
             const hue = (partIndex * 137.5) % 360;
             const edges = detectEdgesNeedingBanding(part.edging, part.rotated);
-            const edgeStroke = 3;
             
             let edgingLines = '';
-            if (edges.top) {
-              edgingLines += `<line x1="${part.x * scale}" y1="${part.y * scale}" x2="${(part.x + part.width) * scale}" y2="${part.y * scale}" stroke="#22c55e" stroke-width="${edgeStroke}" />`;
-            }
-            if (edges.bottom) {
-              edgingLines += `<line x1="${part.x * scale}" y1="${(part.y + part.height) * scale}" x2="${(part.x + part.width) * scale}" y2="${(part.y + part.height) * scale}" stroke="#22c55e" stroke-width="${edgeStroke}" />`;
-            }
-            if (edges.left) {
-              edgingLines += `<line x1="${part.x * scale}" y1="${part.y * scale}" x2="${part.x * scale}" y2="${(part.y + part.height) * scale}" stroke="#22c55e" stroke-width="${edgeStroke}" />`;
-            }
-            if (edges.right) {
-              edgingLines += `<line x1="${(part.x + part.width) * scale}" y1="${part.y * scale}" x2="${(part.x + part.width) * scale}" y2="${(part.y + part.height) * scale}" stroke="#22c55e" stroke-width="${edgeStroke}" />`;
-            }
+            if (edges.top) edgingLines += `<line x1="${part.x * scale}" y1="${part.y * scale}" x2="${(part.x + part.width) * scale}" y2="${part.y * scale}" stroke="#22c55e" stroke-width="2"/>`;
+            if (edges.bottom) edgingLines += `<line x1="${part.x * scale}" y1="${(part.y + part.height) * scale}" x2="${(part.x + part.width) * scale}" y2="${(part.y + part.height) * scale}" stroke="#22c55e" stroke-width="2"/>`;
+            if (edges.left) edgingLines += `<line x1="${part.x * scale}" y1="${part.y * scale}" x2="${part.x * scale}" y2="${(part.y + part.height) * scale}" stroke="#22c55e" stroke-width="2"/>`;
+            if (edges.right) edgingLines += `<line x1="${(part.x + part.width) * scale}" y1="${part.y * scale}" x2="${(part.x + part.width) * scale}" y2="${(part.y + part.height) * scale}" stroke="#22c55e" stroke-width="2"/>`;
+            
+            const fontSize = Math.min(part.width * scale * 0.15, part.height * scale * 0.2, 10);
             
             return `
-              <rect
-                x="${part.x * scale}"
-                y="${part.y * scale}"
-                width="${part.width * scale}"
-                height="${part.height * scale}"
-                fill="hsl(${hue}, 70%, 85%)"
-                stroke="hsl(${hue}, 70%, 40%)"
-                stroke-width="1"
-              />
+              <rect x="${part.x * scale}" y="${part.y * scale}" width="${part.width * scale}" height="${part.height * scale}" fill="hsl(${hue}, 70%, 85%)" stroke="hsl(${hue}, 70%, 40%)" stroke-width="1"/>
               ${edgingLines}
-              <text
-                x="${(part.x + part.width / 2) * scale}"
-                y="${(part.y + part.height / 2 - 70) * scale}"
-                text-anchor="middle"
-                dominant-baseline="middle"
-                font-size="20"
-                font-weight="bold"
-                fill="#000"
-              >
-                ${part.id.split('-')[0]}
-              </text>
-              <text
-                x="${(part.x + part.width / 2) * scale}"
-                y="${(part.y + part.height / 2) * scale}"
-                text-anchor="middle"
-                dominant-baseline="middle"
-                font-size="20"
-                font-weight="bold"
-                fill="#333"
-              >
-                ${part.width} × ${part.height} mm
-              </text>
-              <text
-                x="${(part.x + part.width / 2) * scale}"
-                y="${(part.y + part.height / 2 + 70) * scale}"
-                text-anchor="middle"
-                dominant-baseline="middle"
-                font-size="20"
-                font-weight="bold"
-                fill="#666"
-              >
-                ${part.material || 'Standard'}
-              </text>
-              <text
-                x="${(part.x + part.width / 2) * scale}"
-                y="${(part.y + part.height / 2 + 140) * scale}"
-                text-anchor="middle"
-                dominant-baseline="middle"
-                font-size="20"
-                font-weight="bold"
-                fill="#22c55e"
-              >
-                ${part.edging || 'No edging'}
-              </text>
+              <text x="${(part.x + part.width / 2) * scale}" y="${(part.y + part.height / 2) * scale}" text-anchor="middle" dominant-baseline="middle" font-size="${fontSize}" font-weight="bold" fill="#333">${part.width}×${part.height}</text>
             `;
           }).join('')}
         </svg>
@@ -309,43 +251,37 @@ function generatePrintableHTML(sheets: Sheet[], jobName: string): string {
     `;
   });
   
+  partsHTML += '</div>';
+  
   return `
     <!DOCTYPE html>
     <html>
     <head>
       <title>Fast Cut - ${jobName}</title>
       <style>
+        @page { size: A4 landscape; margin: 10mm; }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 10px; font-size: 11px; }
+        h1 { text-align: center; font-size: 16px; margin: 5px 0; }
+        .summary { display: flex; flex-wrap: wrap; gap: 15px; background: #f0f0f0; padding: 8px 12px; border-radius: 4px; margin-bottom: 10px; font-size: 10px; }
+        .summary p { margin: 0; }
+        .sheets-grid { display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-start; }
+        .sheet-item { border: 1px solid #ccc; padding: 5px; background: #fff; }
+        .sheet-header { font-size: 9px; font-weight: bold; margin-bottom: 3px; text-align: center; }
+        .sheet-svg { display: block; }
         @media print {
-          .sheet-page { page-break-after: always; }
-        }
-        body {
-          font-family: Arial, sans-serif;
-          margin: 20px;
-        }
-        h1 { text-align: center; }
-        h2 { margin-top: 20px; border-bottom: 2px solid #333; }
-        h3 { margin-top: 15px; }
-        svg { margin: 20px 0; }
-        .summary {
-          background: #f0f0f0;
-          padding: 15px;
-          border-radius: 5px;
-          margin: 20px 0;
+          .sheet-item { break-inside: avoid; }
         }
       </style>
     </head>
     <body>
       <h1>Fast Cut - Optimization Layout</h1>
       <div class="summary">
-        <h3>Summary</h3>
-        <p>Job: ${jobName}</p>
-        <p>Date: ${new Date().toLocaleString()}</p>
-        <p>Total Sheets: ${stats.totalSheets}</p>
-        <p>Total Area: ${(stats.totalArea / 1000000).toFixed(2)} m²</p>
-        <p>Used Area: ${(stats.totalUsedArea / 1000000).toFixed(2)} m²</p>
-        <p>Waste: ${(stats.totalWaste / 1000000).toFixed(2)} m² (${stats.averageWastePercentage.toFixed(1)}%)</p>
+        <p><strong>Job:</strong> ${jobName}</p>
+        <p><strong>Date:</strong> ${new Date().toLocaleDateString()}</p>
+        <p><strong>Sheets:</strong> ${stats.totalSheets}</p>
+        <p><strong>Used:</strong> ${(stats.totalUsedArea / 1000000).toFixed(2)} m²</p>
+        <p><strong>Waste:</strong> ${stats.averageWastePercentage.toFixed(1)}%</p>
       </div>
-      
       ${partsHTML}
     </body>
     </html>
