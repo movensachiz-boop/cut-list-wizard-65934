@@ -608,6 +608,17 @@ export type Database = {
         }
         Returns: boolean
       }
+      validate_api_key: { Args: { input_api_key: string }; Returns: boolean }
+      validate_license_key: {
+        Args: { input_key: string }
+        Returns: {
+          company_name: string
+          error_message: string
+          expiry_date: string
+          is_valid: boolean
+          status: string
+        }[]
+      }
     }
     Enums: {
       app_role: "admin" | "user"
