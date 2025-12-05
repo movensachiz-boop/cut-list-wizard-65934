@@ -7,8 +7,8 @@ const corsHeaders = {
 };
 
 const MATERIAL_OPTIONS = [
-  "White Melamine", "Azzano High Gloss", "Grain colored board", "Glass 4mm", "Storm grey matt", "Bison",
-  "Grigio Matt", "Laricina Melamine", "Storm grey gloss", "Masonite 2.3", "Masonite 2.4",
+  "White Melamine", "Azzano High Gloss", "Grain colored board", "Grain example board", "Glass 4mm", "Storm grey matt", "Bison",
+  "Grigio Matt", "Laricina Melamine", "Storm grey gloss", "Masonite 2.3", "Masonite 2.4", "Hardboard",
   "Postform", "PVC Board 2.4", "Black Board Matt", "Gloss white board", "Postform Large",
   "Caraz", "Luca polenta", "High Gloss melamine", "Plain Colored boards", "Iceberg white-Gloss",
   "Brookhill Matt", "Folkstone Grey Gloss", "Grigio", "Leatherwood", "Lucapolenta", "Lucaurban",
