@@ -24,13 +24,15 @@ export const LicenseGate = ({ children }: LicenseGateProps) => {
   useEffect(() => {
     checkStoredLicense();
     
-    // Re-validate license every 2 seconds to catch blocks quickly
+    // Re-validate license every 1 second to catch blocks immediately
     const interval = setInterval(() => {
-      checkStoredLicense();
-    }, 2000);
+      if (isLicenseValid) {
+        checkStoredLicense();
+      }
+    }, 1000);
     
     return () => clearInterval(interval);
-  }, []);
+  }, [isLicenseValid]);
 
   // Handle logout countdown
   useEffect(() => {
@@ -95,12 +97,14 @@ export const LicenseGate = ({ children }: LicenseGateProps) => {
         setLogoutCountdown(null);
         return true;
       } else {
-        // Check if IP is blocked
+        // Check if IP is blocked - IMMEDIATE redirect, no countdown
         if (data.blocked) {
-          setIsBlocked(true);
-          setIsLicenseValid(false);
-          setLicenseInfo(null);
           localStorage.removeItem("app_license");
+          setLicenseInfo(null);
+          setIsLicenseValid(false);
+          setLogoutCountdown(null);
+          setIsBlocked(true);
+          toast.error("Your IP has been blocked");
           return false;
         }
         
