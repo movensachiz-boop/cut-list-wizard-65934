@@ -1,6 +1,107 @@
 import { Sheet, PlacedPart, calculateTotalStats, CutSequence } from './sheetOptimizer';
 import { detectEdgesNeedingBanding } from './edgingDetector';
 
+// Interface for cutting list items (before optimization)
+interface CuttingItem {
+  id: string;
+  length: number;
+  width: number;
+  quantity: number;
+  material: string;
+  edging: string;
+  edgingMaterial: string;
+  notes?: string;
+}
+
+// Export cutting list items to CSV (Meza-compatible format)
+export function exportCuttingListToCSV(items: CuttingItem[], jobName: string = 'cutting_list'): void {
+  const csvRows: string[] = [];
+  
+  // Separator indicator for Excel
+  csvRows.push('Sep=,');
+  
+  // Header (Meza-compatible format)
+  csvRows.push('"Type","Name","Length","Width","Quantity","Notes","Can Rotate (0 = No / 1 = Yes / 2 = Same As Material)","Material","Edging Length 1","Edging Length 2","Edging Width 1","Edging Width 2","Include Edging Thickness","Note 1","Note 2","Note 3","Note 4","Group","Report Tags","Import ID","Parent ID","Library Item Name","Holes Length 1","Holes Length 2","Holes Width 1","Holes Width 2","Grooving Length 1","Grooving Length 2","Grooving Width 1","Grooving Width 2","Material Tag","Edging Length 1 Tag","Edging Length 2 Tag","Edging Width 1 Tag","Edging Width 2 Tag","Apply Machining Charge","Long Expansion","Short Expansion"');
+  
+  // Data rows
+  items.forEach((item, index) => {
+    const edgingL1 = getEdgingCode(item.edging, 'L1', item.edgingMaterial);
+    const edgingL2 = getEdgingCode(item.edging, 'L2', item.edgingMaterial);
+    const edgingW1 = getEdgingCode(item.edging, 'W1', item.edgingMaterial);
+    const edgingW2 = getEdgingCode(item.edging, 'W2', item.edgingMaterial);
+    
+    csvRows.push([
+      '"Input Panel"',
+      '""',
+      `"${item.length} mm"`,
+      `"${item.width} mm"`,
+      `"${item.quantity}"`,
+      `"${item.notes || ''}"`,
+      '"IfNoGrain"',
+      `"${item.material}"`,
+      `"${edgingL1}"`,
+      `"${edgingL2}"`,
+      `"${edgingW1}"`,
+      `"${edgingW2}"`,
+      '"False"',
+      '""',
+      '""',
+      '""',
+      '""',
+      '""',
+      '""',
+      `"${index + 1}"`,
+      `"${index + 1}"`,
+      '""',
+      '""',
+      '""',
+      '""',
+      '""',
+      '""',
+      '""',
+      '""',
+      '""',
+      '""',
+      '""',
+      '""',
+      '""',
+      '""',
+      '""',
+      '"0"',
+      '"0"',
+    ].join(','));
+  });
+  
+  downloadFile(csvRows.join('\n'), `${jobName}.csv`, 'text/csv');
+}
+
+// Helper to convert edging type to Meza format
+function getEdgingCode(edging: string, position: 'L1' | 'L2' | 'W1' | 'W2', edgingMaterial: string): string {
+  if (!edging || edging === 'None') return '';
+  
+  const edgingName = edgingMaterial || 'Colour Edging';
+  
+  switch (edging) {
+    case '4 Sides':
+      return edgingName;
+    case '2 Long':
+      return (position === 'L1' || position === 'L2') ? edgingName : '';
+    case '2 Short':
+      return (position === 'W1' || position === 'W2') ? edgingName : '';
+    case '1 Long':
+      return position === 'L1' ? edgingName : '';
+    case '1 Short':
+      return position === 'W1' ? edgingName : '';
+    case '3 Sides (1L, 2S)':
+      return (position === 'L1' || position === 'W1' || position === 'W2') ? edgingName : '';
+    case '3 Sides (2L, 1S)':
+      return (position === 'L1' || position === 'L2' || position === 'W1') ? edgingName : '';
+    default:
+      return '';
+  }
+}
+
+// Legacy CSV export for optimized sheets (kept for backwards compatibility)
 export function exportToCSV(sheets: Sheet[], jobName: string = 'cutting_list'): void {
   const csvRows: string[] = [];
   
@@ -100,11 +201,10 @@ export function exportToExcel(sheets: Sheet[], jobName: string = 'cutting_list')
   downloadFile(rows.join('\n'), `${jobName}.xls`, 'application/vnd.ms-excel');
 }
 
+// PDF export - Only shows optimization layouts (sheet visualizations)
 export function exportSheetLayoutToPDF(sheets: Sheet[], jobName: string = 'layouts'): void {
-  // Create a printable HTML page that will be converted to PDF via browser print
   const html = generatePrintableHTML(sheets, jobName);
   
-  // Open in new window for printing
   const printWindow = window.open('', '_blank');
   if (printWindow) {
     printWindow.document.write(html);
@@ -120,7 +220,7 @@ function generatePrintableHTML(sheets: Sheet[], jobName: string): string {
   
   let partsHTML = '';
   sheets.forEach((sheet, sheetIndex) => {
-    const scale = 0.4; // Scale for printing (A4 page) - increased for better visibility
+    const scale = 0.4;
     
     partsHTML += `
       <div class="sheet-page">
@@ -205,55 +305,6 @@ function generatePrintableHTML(sheets: Sheet[], jobName: string): string {
             `;
           }).join('')}
         </svg>
-        
-        <table>
-          <thead>
-            <tr>
-              <th>Part ID</th>
-              <th>Width</th>
-              <th>Height</th>
-              <th>X</th>
-              <th>Y</th>
-              <th>Rotated</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${sheet.parts.map(part => `
-              <tr>
-                <td>${part.id}</td>
-                <td>${part.width}mm</td>
-                <td>${part.height}mm</td>
-                <td>${part.x}mm</td>
-                <td>${part.y}mm</td>
-                <td>${part.rotated ? 'Yes' : 'No'}</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-        
-        ${sheet.cutSequence ? `
-          <h3>Cut Sequence</h3>
-          <table>
-            <thead>
-              <tr>
-                <th>Step</th>
-                <th>Type</th>
-                <th>Position</th>
-                <th>Description</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${sheet.cutSequence.map(cut => `
-                <tr>
-                  <td>${cut.step}</td>
-                  <td>${cut.type}</td>
-                  <td>${cut.position}mm</td>
-                  <td>${cut.description}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        ` : ''}
       </div>
     `;
   });
@@ -274,20 +325,6 @@ function generatePrintableHTML(sheets: Sheet[], jobName: string): string {
         h1 { text-align: center; }
         h2 { margin-top: 20px; border-bottom: 2px solid #333; }
         h3 { margin-top: 15px; }
-        table {
-          width: 100%;
-          border-collapse: collapse;
-          margin: 10px 0;
-        }
-        th, td {
-          border: 1px solid #ddd;
-          padding: 8px;
-          text-align: left;
-        }
-        th {
-          background-color: #333;
-          color: white;
-        }
         svg { margin: 20px 0; }
         .summary {
           background: #f0f0f0;
@@ -298,7 +335,7 @@ function generatePrintableHTML(sheets: Sheet[], jobName: string): string {
       </style>
     </head>
     <body>
-      <h1>Fast Cut - Cutting List</h1>
+      <h1>Fast Cut - Optimization Layout</h1>
       <div class="summary">
         <h3>Summary</h3>
         <p>Job: ${jobName}</p>
