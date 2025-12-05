@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Sheet, SheetType, optimizeSheetLayout, calculateTotalStats, Part, SHEET_SIZES } from "@/lib/sheetOptimizer";
 import { SheetLayoutViewer } from "./SheetLayoutViewer";
-import { exportToCSV, exportToExcel, exportSheetLayoutToPDF } from "@/lib/exportUtils";
+import { exportCuttingListToCSV, exportToExcel, exportSheetLayoutToPDF } from "@/lib/exportUtils";
 import { exportToCNC, exportToDXF } from "@/lib/cncExport";
 import { saveOptimizationRun } from "@/lib/optimizationHistory";
 import { OptimizationHistory } from "./OptimizationHistory";
@@ -23,6 +23,8 @@ interface SheetOptimizationProps {
     quantity: number;
     material: string;
     edging: string;
+    edgingMaterial: string;
+    notes?: string;
   }>;
 }
 
@@ -430,11 +432,11 @@ export const SheetOptimization = ({ cuttingItems }: SheetOptimizationProps) => {
               <Button 
                 variant="outline" 
                 size="sm"
-                onClick={() => exportToCSV(optimizedSheets, 'fast_cut_layout')}
+                onClick={() => exportCuttingListToCSV(cuttingItems, 'fast_cut_cutlist')}
                 className="gap-2"
               >
                 <FileText className="h-4 w-4" />
-                CSV
+                CSV (Cutlist)
               </Button>
               <Button 
                 variant="outline" 
@@ -448,11 +450,11 @@ export const SheetOptimization = ({ cuttingItems }: SheetOptimizationProps) => {
               <Button 
                 variant="outline" 
                 size="sm"
-                onClick={() => exportSheetLayoutToPDF(optimizedSheets, 'fast_cut_layout')}
+                onClick={() => exportSheetLayoutToPDF(optimizedSheets, 'fast_cut_optimization')}
                 className="gap-2"
               >
                 <Printer className="h-4 w-4" />
-                Print PDF
+                PDF (Optimization)
               </Button>
               <Button 
                 variant="outline" 
