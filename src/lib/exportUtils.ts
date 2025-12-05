@@ -217,41 +217,49 @@ export function exportSheetLayoutToPDF(sheets: Sheet[], jobName: string = 'layou
 
 function generatePrintableHTML(sheets: Sheet[], jobName: string): string {
   const stats = calculateTotalStats(sheets);
-  const scale = 0.2; // Smaller scale to fit more per page
+  const scale = 0.35; // Scale to fit 2 sheets side by side on A4 landscape
   
-  // Group sheets into rows (2 sheets per row for landscape A4)
-  let partsHTML = '<div class="sheets-grid">';
+  // Group sheets into pairs (2 per page)
+  let pagesHTML = '';
   
-  sheets.forEach((sheet, sheetIndex) => {
-    partsHTML += `
-      <div class="sheet-item">
-        <div class="sheet-header">Sheet ${sheetIndex + 1} - ${sheet.type.toUpperCase()} (${sheet.wastePercentage.toFixed(1)}% waste)</div>
-        <svg width="${sheet.width * scale}" height="${sheet.height * scale}" class="sheet-svg">
-          <rect x="0" y="0" width="${sheet.width * scale}" height="${sheet.height * scale}" fill="#f5f5f5" stroke="#333" stroke-width="1"/>
-          ${sheet.parts.map((part, partIndex) => {
-            const hue = (partIndex * 137.5) % 360;
-            const edges = detectEdgesNeedingBanding(part.edging, part.rotated);
-            
-            let edgingLines = '';
-            if (edges.top) edgingLines += `<line x1="${part.x * scale}" y1="${part.y * scale}" x2="${(part.x + part.width) * scale}" y2="${part.y * scale}" stroke="#22c55e" stroke-width="2"/>`;
-            if (edges.bottom) edgingLines += `<line x1="${part.x * scale}" y1="${(part.y + part.height) * scale}" x2="${(part.x + part.width) * scale}" y2="${(part.y + part.height) * scale}" stroke="#22c55e" stroke-width="2"/>`;
-            if (edges.left) edgingLines += `<line x1="${part.x * scale}" y1="${part.y * scale}" x2="${part.x * scale}" y2="${(part.y + part.height) * scale}" stroke="#22c55e" stroke-width="2"/>`;
-            if (edges.right) edgingLines += `<line x1="${(part.x + part.width) * scale}" y1="${part.y * scale}" x2="${(part.x + part.width) * scale}" y2="${(part.y + part.height) * scale}" stroke="#22c55e" stroke-width="2"/>`;
-            
-            const fontSize = Math.min(part.width * scale * 0.15, part.height * scale * 0.2, 10);
-            
-            return `
-              <rect x="${part.x * scale}" y="${part.y * scale}" width="${part.width * scale}" height="${part.height * scale}" fill="hsl(${hue}, 70%, 85%)" stroke="hsl(${hue}, 70%, 40%)" stroke-width="1"/>
-              ${edgingLines}
-              <text x="${(part.x + part.width / 2) * scale}" y="${(part.y + part.height / 2) * scale}" text-anchor="middle" dominant-baseline="middle" font-size="${fontSize}" font-weight="bold" fill="#333">${part.width}×${part.height}</text>
-            `;
-          }).join('')}
-        </svg>
-      </div>
-    `;
-  });
-  
-  partsHTML += '</div>';
+  for (let i = 0; i < sheets.length; i += 2) {
+    const sheetsOnPage = sheets.slice(i, i + 2);
+    
+    pagesHTML += `<div class="page">`;
+    pagesHTML += `<div class="sheets-row">`;
+    
+    sheetsOnPage.forEach((sheet, idx) => {
+      const sheetIndex = i + idx;
+      pagesHTML += `
+        <div class="sheet-item">
+          <div class="sheet-header">Sheet ${sheetIndex + 1} - ${sheet.type.toUpperCase()} (${sheet.wastePercentage.toFixed(1)}% waste)</div>
+          <svg width="${sheet.width * scale}" height="${sheet.height * scale}" class="sheet-svg">
+            <rect x="0" y="0" width="${sheet.width * scale}" height="${sheet.height * scale}" fill="#f5f5f5" stroke="#333" stroke-width="1"/>
+            ${sheet.parts.map((part, partIndex) => {
+              const hue = (partIndex * 137.5) % 360;
+              const edges = detectEdgesNeedingBanding(part.edging, part.rotated);
+              
+              let edgingLines = '';
+              if (edges.top) edgingLines += `<line x1="${part.x * scale}" y1="${part.y * scale}" x2="${(part.x + part.width) * scale}" y2="${part.y * scale}" stroke="#22c55e" stroke-width="2"/>`;
+              if (edges.bottom) edgingLines += `<line x1="${part.x * scale}" y1="${(part.y + part.height) * scale}" x2="${(part.x + part.width) * scale}" y2="${(part.y + part.height) * scale}" stroke="#22c55e" stroke-width="2"/>`;
+              if (edges.left) edgingLines += `<line x1="${part.x * scale}" y1="${part.y * scale}" x2="${part.x * scale}" y2="${(part.y + part.height) * scale}" stroke="#22c55e" stroke-width="2"/>`;
+              if (edges.right) edgingLines += `<line x1="${(part.x + part.width) * scale}" y1="${part.y * scale}" x2="${(part.x + part.width) * scale}" y2="${(part.y + part.height) * scale}" stroke="#22c55e" stroke-width="2"/>`;
+              
+              const fontSize = Math.min(part.width * scale * 0.12, part.height * scale * 0.15, 9);
+              
+              return `
+                <rect x="${part.x * scale}" y="${part.y * scale}" width="${part.width * scale}" height="${part.height * scale}" fill="hsl(${hue}, 70%, 85%)" stroke="hsl(${hue}, 70%, 40%)" stroke-width="1"/>
+                ${edgingLines}
+                <text x="${(part.x + part.width / 2) * scale}" y="${(part.y + part.height / 2) * scale}" text-anchor="middle" dominant-baseline="middle" font-size="${fontSize}" font-weight="bold" fill="#333">${part.width}×${part.height}</text>
+              `;
+            }).join('')}
+          </svg>
+        </div>
+      `;
+    });
+    
+    pagesHTML += `</div></div>`;
+  }
   
   return `
     <!DOCTYPE html>
@@ -259,30 +267,28 @@ function generatePrintableHTML(sheets: Sheet[], jobName: string): string {
     <head>
       <title>Fast Cut - ${jobName}</title>
       <style>
-        @page { size: A4 landscape; margin: 10mm; }
-        body { font-family: Arial, sans-serif; margin: 0; padding: 10px; font-size: 11px; }
-        h1 { text-align: center; font-size: 16px; margin: 5px 0; }
-        .summary { display: flex; flex-wrap: wrap; gap: 15px; background: #f0f0f0; padding: 8px 12px; border-radius: 4px; margin-bottom: 10px; font-size: 10px; }
-        .summary p { margin: 0; }
-        .sheets-grid { display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-start; }
-        .sheet-item { border: 1px solid #ccc; padding: 5px; background: #fff; }
-        .sheet-header { font-size: 9px; font-weight: bold; margin-bottom: 3px; text-align: center; }
+        @page { size: A4 landscape; margin: 8mm; }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; font-size: 10px; }
+        .page { page-break-after: always; padding: 8px; height: calc(100vh - 16px); box-sizing: border-box; }
+        .page:last-child { page-break-after: auto; }
+        .header { text-align: center; margin-bottom: 5px; }
+        .header h1 { font-size: 14px; margin: 0; }
+        .header .info { font-size: 9px; color: #666; }
+        .sheets-row { display: flex; justify-content: space-around; align-items: flex-start; gap: 15px; height: calc(100% - 30px); }
+        .sheet-item { border: 1px solid #ccc; padding: 5px; background: #fff; flex: 0 0 auto; }
+        .sheet-header { font-size: 10px; font-weight: bold; margin-bottom: 4px; text-align: center; }
         .sheet-svg { display: block; }
         @media print {
-          .sheet-item { break-inside: avoid; }
+          .page { height: auto; min-height: 100vh; }
         }
       </style>
     </head>
     <body>
-      <h1>Fast Cut - Optimization Layout</h1>
-      <div class="summary">
-        <p><strong>Job:</strong> ${jobName}</p>
-        <p><strong>Date:</strong> ${new Date().toLocaleDateString()}</p>
-        <p><strong>Sheets:</strong> ${stats.totalSheets}</p>
-        <p><strong>Used:</strong> ${(stats.totalUsedArea / 1000000).toFixed(2)} m²</p>
-        <p><strong>Waste:</strong> ${stats.averageWastePercentage.toFixed(1)}%</p>
+      <div class="header">
+        <h1>Fast Cut - Optimization Layout</h1>
+        <div class="info">Job: ${jobName} | Date: ${new Date().toLocaleDateString()} | Sheets: ${stats.totalSheets} | Used: ${(stats.totalUsedArea / 1000000).toFixed(2)} m² | Waste: ${stats.averageWastePercentage.toFixed(1)}%</div>
       </div>
-      ${partsHTML}
+      ${pagesHTML}
     </body>
     </html>
   `;
