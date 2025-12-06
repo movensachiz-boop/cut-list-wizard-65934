@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Shield, Plus, Ban, Trash2, Key, Calendar, Building, Activity, Globe, ShieldBan, CheckCircle, LogOut, Megaphone } from "lucide-react";
+import { Shield, Plus, Ban, Trash2, Key, Calendar, Building, Activity, Globe, ShieldBan, CheckCircle, LogOut, Megaphone, RefreshCw } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -333,6 +333,26 @@ const AdminPanel = () => {
     }
   };
 
+  const handleRegenerateLicenseKey = async (id: string, companyName: string) => {
+    if (!confirm(`Regenerate license key for ${companyName}? This will immediately log out ALL devices using the current key.`)) {
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase.functions.invoke('manage-licenses', {
+        body: { action: 'regenerate_key', admin_secret: ADMIN_SECRET, id }
+      });
+
+      if (error) throw error;
+
+      toast.success(`License key regenerated for ${companyName}. All devices logged out.`);
+      await loadLicenses();
+    } catch (error) {
+      console.error('Error regenerating license key:', error);
+      toast.error("Failed to regenerate license key");
+    }
+  };
+
   const handleBlockIP = async () => {
     if (!blockIPAddress) {
       toast.error("Please enter an IP address");
@@ -627,6 +647,14 @@ const AdminPanel = () => {
                         </TableCell>
                         <TableCell>
                           <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              onClick={() => handleRegenerateLicenseKey(license.id, license.company_name)}
+                              title="Regenerate key & logout all devices"
+                            >
+                              <RefreshCw className="h-4 w-4" />
+                            </Button>
                             {license.status !== 'suspended' && (
                               <Button
                                 size="sm"

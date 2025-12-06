@@ -325,6 +325,30 @@ serve(async (req) => {
         });
       }
 
+      case 'regenerate_key': {
+        // Generate a new license key
+        const { data: newLicenseKey } = await supabase.rpc('generate_license_key');
+        
+        const { data: license, error } = await supabase
+          .from('licenses')
+          .update({ license_key: newLicenseKey })
+          .eq('id', data.id)
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        console.log('License key regenerated for:', license.company_name);
+        
+        return new Response(JSON.stringify({ 
+          success: true, 
+          license,
+          message: 'License key regenerated. All devices using the old key will be logged out.'
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
       case 'stats': {
         const { data: licenses } = await supabase
           .from('licenses')
