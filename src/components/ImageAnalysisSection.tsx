@@ -37,7 +37,7 @@ export const ImageAnalysisSection = ({
             Image Analysis
           </h2>
           <p className="text-muted-foreground text-lg max-w-md">
-            Take a photo or upload an image of your cutting list
+            Take a photo or upload an image of your cutting list and hardware
           </p>
         </div>
 
@@ -63,7 +63,7 @@ export const ImageAnalysisSection = ({
               <p className="text-xl font-semibold text-foreground animate-pulse">Analyzing Image...</p>
               <p className="text-sm text-muted-foreground flex items-center gap-2 justify-center">
                 <Sparkles className="h-4 w-4" />
-                Extracting dimensions with precision
+                Extracting dimensions and hardware
               </p>
             </div>
           </div>

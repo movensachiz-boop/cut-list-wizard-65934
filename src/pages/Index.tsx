@@ -554,7 +554,7 @@ const Index = () => {
           material?: string;
           edging?: string;
         }) => {
-          const confidenceNote = dim.confidence === "low" || dim.confidence === "medium" ? ` ⚠️ Uncertain (${dim.confidence} confidence)` : "";
+          const confidenceNote = dim.confidence === "low" || dim.confidence === "medium" ? ` (${dim.confidence} confidence)` : "";
 
           // Handle cutting dimensions
           const parsed = parseShorthand(dim.value);
@@ -598,16 +598,72 @@ const Index = () => {
         setItems([...items, ...newItems]);
         setLastBatchSize(newItems.length);
         const uncertainCount = newItems.filter(item => item.confidence === "low" || item.confidence === "medium").length;
+        
+        // Handle hardware items if found
+        let hardwareMessage = "";
+        if (data.hardware && data.hardware.length > 0) {
+          hardwareMessage = ` | ${data.hardware.length} hardware items detected`;
+          
+          // Add hardware to the cutting list if we have a current cutting list ID
+          if (currentCuttingListId) {
+            for (const hw of data.hardware) {
+              if (hw.matched_item) {
+                await supabase.from('hardware_entries').insert({
+                  cutting_list_id: currentCuttingListId,
+                  hardware_item_id: hw.matched_item.id,
+                  quantity: hw.quantity,
+                  notes: `From image (${hw.confidence} confidence)`
+                });
+              }
+            }
+          } else {
+            // Show hardware items that were detected but couldn't be saved
+            const hwNames = data.hardware.map((hw: { quantity: number; name: string }) => `${hw.quantity}x ${hw.name}`).join(', ');
+            toast({
+              title: "Hardware detected",
+              description: `Found: ${hwNames}. Save cutting list first to add hardware items.`
+            });
+          }
+        }
+        
         toast({
           title: "Image analyzed successfully",
-          description: uncertainCount > 0 ? `Found ${newItems.length} dimensions. ${uncertainCount} marked as uncertain - please verify!` : `Found ${newItems.length} dimensions`
+          description: uncertainCount > 0 
+            ? `Found ${newItems.length} dimensions${hardwareMessage}. ${uncertainCount} marked as uncertain - please verify!` 
+            : `Found ${newItems.length} dimensions${hardwareMessage}`
         });
+      } else if (data.hardware && data.hardware.length > 0) {
+        // Only hardware found, no cutting dimensions
+        setAnalysisProgress(100);
+        
+        if (currentCuttingListId) {
+          for (const hw of data.hardware) {
+            if (hw.matched_item) {
+              await supabase.from('hardware_entries').insert({
+                cutting_list_id: currentCuttingListId,
+                hardware_item_id: hw.matched_item.id,
+                quantity: hw.quantity,
+                notes: `From image (${hw.confidence} confidence)`
+              });
+            }
+          }
+          toast({
+            title: "Hardware added",
+            description: `Found and added ${data.hardware.length} hardware items from image`
+          });
+        } else {
+          const hwNames = data.hardware.map((hw: { quantity: number; name: string }) => `${hw.quantity}x ${hw.name}`).join(', ');
+          toast({
+            title: "Hardware detected",
+            description: `Found: ${hwNames}. Save cutting list first to add hardware items.`
+          });
+        }
       } else {
         clearInterval(progressInterval);
         setAnalysisProgress(0);
         toast({
-          title: "No dimensions found",
-          description: "Could not find any cutting dimensions in the image",
+          title: "No items found",
+          description: "Could not find any cutting dimensions or hardware in the image",
           variant: "destructive"
         });
       }

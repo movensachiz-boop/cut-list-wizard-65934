@@ -1,5 +1,6 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -18,12 +19,24 @@ serve(async (req) => {
       throw new Error('No image data provided');
     }
 
-    console.log('Analyzing image for cutting list dimensions...');
+    console.log('Analyzing image for cutting list dimensions and hardware...');
 
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
       throw new Error('LOVABLE_API_KEY is not configured');
     }
+
+    // Fetch hardware items from database
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    const { data: hardwareItems } = await supabase
+      .from('hardware_items')
+      .select('id, name, short_name');
+
+    const hardwareList = hardwareItems?.map(h => h.name).join(', ') || '';
+    console.log('Hardware items loaded:', hardwareItems?.length || 0);
 
     // Call Lovable AI with vision model
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
@@ -37,7 +50,10 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `You are an expert at reading cutting lists from images. Extract ONLY cutting dimensions that are ACTUALLY VISIBLE in the image.
+            content: `You are an expert at reading cutting lists from images. Extract ONLY items that are ACTUALLY VISIBLE in the image.
+
+== SECTION 1: CUTTING DIMENSIONS ==
+Extract cutting dimensions (panels, boards, sheets) that you can clearly see.
 
 CRITICAL RULES - DOUBLE VERIFICATION REQUIRED:
 1. ONLY extract items that you can clearly see written or printed in the image
@@ -114,21 +130,33 @@ CONFIDENCE LEVELS:
 - "medium": good match but some uncertainty
 - "low": fuzzy match, best guess
 
+== SECTION 2: HARDWARE ITEMS ==
+Also look for HARDWARE ITEMS like hinges, handles, screws, runners, etc.
+The available hardware items in the system are: ${hardwareList}
+
+When you find hardware, return it in this format on SEPARATE lines:
+HARDWARE:quantity|item_name|confidence
+Example: HARDWARE:10|Soft Close Hinges 35mm|high
+Example: HARDWARE:4|Bar Handle 192mm Matt Black|medium
+Example: HARDWARE:50|Confirmat Screws 7x50|high
+
+Match the hardware names as closely as possible to the available items.
+
 VERIFICATION STEP:
 Before returning, review each extracted entry:
-- Can I actually see this exact dimension in the image?
+- Can I actually see this exact dimension/hardware in the image?
 - Am I 100% certain this isn't a hallucination?
 - Did I carry forward the material correctly for sections without material labels?
 - If NO to any question, REVIEW or REMOVE the entry
 
-If you cannot find any items, return "NO_DIMENSIONS_FOUND"`
+If you cannot find any items, return "NO_ITEMS_FOUND"`
           },
           {
             role: 'user',
             content: [
               {
                 type: 'text',
-                text: 'Extract all cutting list dimensions from this image. Return them in LengthXWidthXQuantity format, one per line.'
+                text: 'Extract all cutting list dimensions AND hardware items from this image. Return dimensions in LengthXWidthXQuantity format and hardware as HARDWARE:quantity|name|confidence, one per line.'
               },
               {
                 type: 'image_url',
@@ -153,7 +181,7 @@ If you cannot find any items, return "NO_DIMENSIONS_FOUND"`
     
     console.log('Extracted text:', extractedText);
 
-    // Parse the extracted cutting dimensions
+    // Parse the extracted cutting dimensions and hardware
     const lines = extractedText.split('\n').filter((line: string) => line.trim());
     const dimensions: Array<{ 
       value: string; 
@@ -161,8 +189,37 @@ If you cannot find any items, return "NO_DIMENSIONS_FOUND"`
       material?: string; 
       edging?: string;
     }> = [];
+    const hardware: Array<{
+      quantity: number;
+      name: string;
+      confidence: string;
+      matched_item?: { id: string; name: string };
+    }> = [];
 
     for (const line of lines) {
+      // Check for hardware items first
+      const hardwareMatch = line.match(/HARDWARE:\s*(\d+)\s*\|\s*([^|]+)\s*\|\s*(high|medium|low)/i);
+      if (hardwareMatch) {
+        const hwQuantity = parseInt(hardwareMatch[1]);
+        const hwName = hardwareMatch[2].trim();
+        const hwConfidence = hardwareMatch[3].toLowerCase();
+        
+        // Try to match to database hardware items
+        const matchedHw = hardwareItems?.find(h => 
+          h.name.toLowerCase().includes(hwName.toLowerCase()) ||
+          hwName.toLowerCase().includes(h.name.toLowerCase()) ||
+          (h.short_name && h.short_name.toLowerCase().includes(hwName.toLowerCase()))
+        );
+        
+        hardware.push({
+          quantity: hwQuantity,
+          name: hwName,
+          confidence: hwConfidence,
+          matched_item: matchedHw ? { id: matchedHw.id, name: matchedHw.name } : undefined
+        });
+        continue;
+      }
+      
       // Check if line matches cutting dimensions with material and edging
       const extendedMatch = line.match(/(\d+)\s*[xX*]\s*(\d+)\s*[xX*]\s*(\d+)\s*\|\s*(high|medium|low)\s*\|\s*([^|]+)\s*\|\s*(.+)/i);
       if (extendedMatch) {
@@ -195,6 +252,9 @@ If you cannot find any items, return "NO_DIMENSIONS_FOUND"`
       }
     }
 
+    console.log('Parsed dimensions:', dimensions.length);
+    console.log('Parsed hardware:', hardware.length);
+
     // Check if ANY item has edging information (excluding 'None')
     const hasAnyEdging = dimensions.some(dim => dim.edging && dim.edging !== 'None');
     
@@ -220,11 +280,11 @@ If you cannot find any items, return "NO_DIMENSIONS_FOUND"`
       });
     }
 
-    if (dimensions.length === 0 && extractedText.includes('NO_DIMENSIONS_FOUND')) {
+    if (dimensions.length === 0 && hardware.length === 0 && extractedText.includes('NO_ITEMS_FOUND')) {
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: 'No cutting dimensions found in the image. Please ensure the image contains clear dimension information.' 
+          error: 'No cutting dimensions or hardware found in the image. Please ensure the image contains clear information.' 
         }),
         { 
           status: 200,
@@ -237,7 +297,9 @@ If you cannot find any items, return "NO_DIMENSIONS_FOUND"`
       JSON.stringify({ 
         success: true,
         dimensions,
-        count: dimensions.length
+        hardware,
+        count: dimensions.length,
+        hardwareCount: hardware.length
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
