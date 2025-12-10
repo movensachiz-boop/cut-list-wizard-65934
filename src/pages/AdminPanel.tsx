@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Shield, Plus, Ban, Trash2, Key, Calendar, Building, Activity, Globe, ShieldBan, CheckCircle, LogOut, Megaphone, RefreshCw, DollarSign, Save } from "lucide-react";
+import { Shield, Plus, Ban, Trash2, Key, Calendar, Building, Activity, Globe, ShieldBan, CheckCircle, LogOut, Megaphone, RefreshCw, DollarSign, Save, Copy } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -764,6 +764,18 @@ const AdminPanel = () => {
                           <div className="flex items-center gap-2">
                             <Key className="h-4 w-4 text-muted-foreground" />
                             <code className="text-xs bg-muted px-2 py-1 rounded">{license.license_key}</code>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-6 w-6 p-0"
+                              onClick={() => {
+                                navigator.clipboard.writeText(license.license_key);
+                                toast.success("License key copied");
+                              }}
+                              title="Copy license key"
+                            >
+                              <Copy className="h-3 w-3" />
+                            </Button>
                           </div>
                         </TableCell>
                         <TableCell>
