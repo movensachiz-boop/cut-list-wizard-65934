@@ -154,6 +154,33 @@ export type Database = {
         }
         Relationships: []
       }
+      edging_prices: {
+        Row: {
+          cost_per_meter: number
+          created_at: string
+          edging_name: string
+          id: string
+          price_per_meter: number
+          updated_at: string
+        }
+        Insert: {
+          cost_per_meter?: number
+          created_at?: string
+          edging_name: string
+          id?: string
+          price_per_meter?: number
+          updated_at?: string
+        }
+        Update: {
+          cost_per_meter?: number
+          created_at?: string
+          edging_name?: string
+          id?: string
+          price_per_meter?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       hardware_entries: {
         Row: {
           created_at: string | null
@@ -319,6 +346,39 @@ export type Database = {
         }
         Relationships: []
       }
+      material_prices: {
+        Row: {
+          cost_per_sheet: number
+          created_at: string
+          id: string
+          material_name: string
+          price_per_sheet: number
+          sheet_length: number
+          sheet_width: number
+          updated_at: string
+        }
+        Insert: {
+          cost_per_sheet?: number
+          created_at?: string
+          id?: string
+          material_name: string
+          price_per_sheet?: number
+          sheet_length?: number
+          sheet_width?: number
+          updated_at?: string
+        }
+        Update: {
+          cost_per_sheet?: number
+          created_at?: string
+          id?: string
+          material_name?: string
+          price_per_sheet?: number
+          sheet_length?: number
+          sheet_width?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           company_name: string | null
@@ -469,6 +529,74 @@ export type Database = {
           },
         ]
       }
+      quotes: {
+        Row: {
+          created_at: string
+          customer_email: string | null
+          customer_name: string | null
+          customer_phone: string | null
+          cutting_list_id: string | null
+          id: string
+          items: Json
+          notes: string | null
+          quote_number: string
+          status: string
+          subtotal: number
+          tax_amount: number
+          tax_rate: number
+          total: number
+          updated_at: string
+          user_id: string
+          valid_until: string | null
+        }
+        Insert: {
+          created_at?: string
+          customer_email?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          cutting_list_id?: string | null
+          id?: string
+          items?: Json
+          notes?: string | null
+          quote_number: string
+          status?: string
+          subtotal?: number
+          tax_amount?: number
+          tax_rate?: number
+          total?: number
+          updated_at?: string
+          user_id: string
+          valid_until?: string | null
+        }
+        Update: {
+          created_at?: string
+          customer_email?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          cutting_list_id?: string | null
+          id?: string
+          items?: Json
+          notes?: string | null
+          quote_number?: string
+          status?: string
+          subtotal?: number
+          tax_amount?: number
+          tax_rate?: number
+          total?: number
+          updated_at?: string
+          user_id?: string
+          valid_until?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quotes_cutting_list_id_fkey"
+            columns: ["cutting_list_id"]
+            isOneToOne: false
+            referencedRelation: "cutting_lists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       uploaded_images: {
         Row: {
           analysis_result: Json | null
@@ -600,6 +728,7 @@ export type Database = {
     Functions: {
       generate_api_key: { Args: never; Returns: string }
       generate_license_key: { Args: never; Returns: string }
+      generate_quote_number: { Args: never; Returns: string }
       get_user_count: { Args: never; Returns: number }
       has_role: {
         Args: {

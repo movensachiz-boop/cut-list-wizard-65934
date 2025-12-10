@@ -18,6 +18,7 @@ import { AIAssistant } from "@/components/AIAssistant";
 import { BibleVerseSlider } from "@/components/BibleVerseSlider";
 import { SheetOptimization } from "@/components/SheetOptimization";
 import { HardwareSelector } from "@/components/HardwareSelector";
+import { QuoteGenerator } from "@/components/QuoteGenerator";
 import { Announcements } from "@/components/Announcements";
 import { Calculator } from "@/components/Calculator";
 const MATERIAL_OPTIONS = [
@@ -873,6 +874,7 @@ const Index = () => {
               }}
             />
             <MassCorrection items={items} onUpdateItems={handleUpdateMultipleItems} />
+            <QuoteGenerator items={items} cuttingListId={currentCuttingListId} />
           </div>
         </div>
 

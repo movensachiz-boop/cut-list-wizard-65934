@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Shield, Plus, Ban, Trash2, Key, Calendar, Building, Activity, Globe, ShieldBan, CheckCircle, LogOut, Megaphone, RefreshCw } from "lucide-react";
+import { Shield, Plus, Ban, Trash2, Key, Calendar, Building, Activity, Globe, ShieldBan, CheckCircle, LogOut, Megaphone, RefreshCw, DollarSign, Save } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -65,6 +65,22 @@ interface Announcement {
   expires_at: string | null;
 }
 
+interface MaterialPrice {
+  id: string;
+  material_name: string;
+  cost_per_sheet: number;
+  price_per_sheet: number;
+  sheet_length: number;
+  sheet_width: number;
+}
+
+interface EdgingPrice {
+  id: string;
+  edging_name: string;
+  cost_per_meter: number;
+  price_per_meter: number;
+}
+
 const AdminPanel = () => {
   const navigate = useNavigate();
   const [licenses, setLicenses] = useState<License[]>([]);
@@ -87,6 +103,14 @@ const AdminPanel = () => {
   const [blockedIPs, setBlockedIPs] = useState<BlockedIP[]>([]);
   const [blockIPAddress, setBlockIPAddress] = useState("");
   const [blockReason, setBlockReason] = useState("");
+  
+  // Pricing state
+  const [materialPrices, setMaterialPrices] = useState<MaterialPrice[]>([]);
+  const [edgingPrices, setEdgingPrices] = useState<EdgingPrice[]>([]);
+  const [newMaterialName, setNewMaterialName] = useState("");
+  const [newMaterialPrice, setNewMaterialPrice] = useState("");
+  const [newEdgingName, setNewEdgingName] = useState("");
+  const [newEdgingPrice, setNewEdgingPrice] = useState("");
   
   // Form state
   const [companyName, setCompanyName] = useState("");
@@ -115,7 +139,7 @@ const AdminPanel = () => {
       }
 
       setIsAdmin(true);
-      await Promise.all([loadLicenses(), loadStats(), loadIPLogs(), loadBlockedIPs(), loadAnnouncements()]);
+      await Promise.all([loadLicenses(), loadStats(), loadIPLogs(), loadBlockedIPs(), loadAnnouncements(), loadPricing()]);
     } catch (error) {
       console.error('Error checking admin status:', error);
       toast.error("Failed to verify admin access");
@@ -182,6 +206,118 @@ const AdminPanel = () => {
       setAnnouncements(typedData);
     } catch (error) {
       console.error('Error loading announcements:', error);
+    }
+  };
+
+  const loadPricing = async () => {
+    try {
+      const [materialRes, edgingRes] = await Promise.all([
+        supabase.from('material_prices').select('*').order('material_name'),
+        supabase.from('edging_prices').select('*').order('edging_name')
+      ]);
+      
+      if (materialRes.data) setMaterialPrices(materialRes.data);
+      if (edgingRes.data) setEdgingPrices(edgingRes.data);
+    } catch (error) {
+      console.error('Error loading pricing:', error);
+    }
+  };
+
+  const handleAddMaterialPrice = async () => {
+    if (!newMaterialName || !newMaterialPrice) {
+      toast.error("Please enter material name and price");
+      return;
+    }
+    
+    try {
+      const { error } = await supabase.from('material_prices').insert({
+        material_name: newMaterialName,
+        price_per_sheet: parseFloat(newMaterialPrice),
+        cost_per_sheet: 0
+      });
+      
+      if (error) throw error;
+      toast.success("Material price added");
+      setNewMaterialName("");
+      setNewMaterialPrice("");
+      await loadPricing();
+    } catch (error) {
+      console.error('Error adding material price:', error);
+      toast.error("Failed to add material price");
+    }
+  };
+
+  const handleAddEdgingPrice = async () => {
+    if (!newEdgingName || !newEdgingPrice) {
+      toast.error("Please enter edging name and price");
+      return;
+    }
+    
+    try {
+      const { error } = await supabase.from('edging_prices').insert({
+        edging_name: newEdgingName,
+        price_per_meter: parseFloat(newEdgingPrice),
+        cost_per_meter: 0
+      });
+      
+      if (error) throw error;
+      toast.success("Edging price added");
+      setNewEdgingName("");
+      setNewEdgingPrice("");
+      await loadPricing();
+    } catch (error) {
+      console.error('Error adding edging price:', error);
+      toast.error("Failed to add edging price");
+    }
+  };
+
+  const handleUpdateMaterialPrice = async (id: string, price: number) => {
+    try {
+      const { error } = await supabase
+        .from('material_prices')
+        .update({ price_per_sheet: price })
+        .eq('id', id);
+      
+      if (error) throw error;
+      await loadPricing();
+    } catch (error) {
+      console.error('Error updating material price:', error);
+    }
+  };
+
+  const handleUpdateEdgingPrice = async (id: string, price: number) => {
+    try {
+      const { error } = await supabase
+        .from('edging_prices')
+        .update({ price_per_meter: price })
+        .eq('id', id);
+      
+      if (error) throw error;
+      await loadPricing();
+    } catch (error) {
+      console.error('Error updating edging price:', error);
+    }
+  };
+
+  const handleDeleteMaterialPrice = async (id: string) => {
+    try {
+      const { error } = await supabase.from('material_prices').delete().eq('id', id);
+      if (error) throw error;
+      toast.success("Material price deleted");
+      await loadPricing();
+    } catch (error) {
+      console.error('Error deleting material price:', error);
+    }
+  };
+
+  const handleDeleteEdgingPrice = async (id: string) => {
+    try {
+      const { error } = await supabase.from('edging_prices').delete().eq('id', id);
+      if (error) throw error;
+      toast.success("Edging price deleted");
+      await loadPricing();
+    } catch (error) {
+      console.error('Error deleting edging price:', error);
     }
   };
 
@@ -530,6 +666,7 @@ const AdminPanel = () => {
             <TabsTrigger value="announcements">Announcements ({announcements.length})</TabsTrigger>
             <TabsTrigger value="ip-logs">IP Logs ({ipLogs.length})</TabsTrigger>
             <TabsTrigger value="blocked-ips">Blocked IPs ({blockedIPs.length})</TabsTrigger>
+            <TabsTrigger value="pricing">Pricing</TabsTrigger>
           </TabsList>
 
           <TabsContent value="licenses">
@@ -979,6 +1116,151 @@ const AdminPanel = () => {
                 </Table>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Pricing Tab */}
+          <TabsContent value="pricing">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Material Prices */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <DollarSign className="h-5 w-5" />
+                    Material Prices (per sheet)
+                  </CardTitle>
+                  <CardDescription>Set prices for each material type</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex gap-2 mb-4">
+                    <Input 
+                      placeholder="Material name" 
+                      value={newMaterialName}
+                      onChange={(e) => setNewMaterialName(e.target.value)}
+                    />
+                    <Input 
+                      type="number" 
+                      placeholder="Price" 
+                      className="w-32"
+                      value={newMaterialPrice}
+                      onChange={(e) => setNewMaterialPrice(e.target.value)}
+                    />
+                    <Button onClick={handleAddMaterialPrice}>
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Material</TableHead>
+                        <TableHead>Price/Sheet</TableHead>
+                        <TableHead></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {materialPrices.map((mp) => (
+                        <TableRow key={mp.id}>
+                          <TableCell>{mp.material_name}</TableCell>
+                          <TableCell>
+                            <Input
+                              type="number"
+                              value={mp.price_per_sheet}
+                              onChange={(e) => handleUpdateMaterialPrice(mp.id, parseFloat(e.target.value) || 0)}
+                              className="w-24"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Button 
+                              size="sm" 
+                              variant="ghost" 
+                              onClick={() => handleDeleteMaterialPrice(mp.id)}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      {materialPrices.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={3} className="text-center text-muted-foreground">
+                            No material prices configured
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+
+              {/* Edging Prices */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <DollarSign className="h-5 w-5" />
+                    Edging Prices (per meter)
+                  </CardTitle>
+                  <CardDescription>Set prices for each edging type</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex gap-2 mb-4">
+                    <Input 
+                      placeholder="Edging name" 
+                      value={newEdgingName}
+                      onChange={(e) => setNewEdgingName(e.target.value)}
+                    />
+                    <Input 
+                      type="number" 
+                      placeholder="Price/m" 
+                      className="w-32"
+                      value={newEdgingPrice}
+                      onChange={(e) => setNewEdgingPrice(e.target.value)}
+                    />
+                    <Button onClick={handleAddEdgingPrice}>
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Edging Type</TableHead>
+                        <TableHead>Price/Meter</TableHead>
+                        <TableHead></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {edgingPrices.map((ep) => (
+                        <TableRow key={ep.id}>
+                          <TableCell>{ep.edging_name}</TableCell>
+                          <TableCell>
+                            <Input
+                              type="number"
+                              value={ep.price_per_meter}
+                              onChange={(e) => handleUpdateEdgingPrice(ep.id, parseFloat(e.target.value) || 0)}
+                              className="w-24"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Button 
+                              size="sm" 
+                              variant="ghost" 
+                              onClick={() => handleDeleteEdgingPrice(ep.id)}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      {edgingPrices.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={3} className="text-center text-muted-foreground">
+                            No edging prices configured
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
         </Tabs>
       </div>
