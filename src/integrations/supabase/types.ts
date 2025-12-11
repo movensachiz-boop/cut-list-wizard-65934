@@ -265,6 +265,63 @@ export type Database = {
         }
         Relationships: []
       }
+      ip_company_settings: {
+        Row: {
+          company_logo_url: string | null
+          company_name: string | null
+          created_at: string
+          id: string
+          ip_address: string
+          updated_at: string
+        }
+        Insert: {
+          company_logo_url?: string | null
+          company_name?: string | null
+          created_at?: string
+          id?: string
+          ip_address: string
+          updated_at?: string
+        }
+        Update: {
+          company_logo_url?: string | null
+          company_name?: string | null
+          created_at?: string
+          id?: string
+          ip_address?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      ip_edging_prices: {
+        Row: {
+          cost_per_meter: number
+          created_at: string
+          edging_name: string
+          id: string
+          ip_address: string
+          price_per_meter: number
+          updated_at: string
+        }
+        Insert: {
+          cost_per_meter?: number
+          created_at?: string
+          edging_name: string
+          id?: string
+          ip_address: string
+          price_per_meter?: number
+          updated_at?: string
+        }
+        Update: {
+          cost_per_meter?: number
+          created_at?: string
+          edging_name?: string
+          id?: string
+          ip_address?: string
+          price_per_meter?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       ip_logs: {
         Row: {
           action: string
@@ -301,6 +358,42 @@ export type Database = {
           license_key?: string | null
           region?: string | null
           user_agent?: string | null
+        }
+        Relationships: []
+      }
+      ip_material_prices: {
+        Row: {
+          cost_per_sheet: number
+          created_at: string
+          id: string
+          ip_address: string
+          material_name: string
+          price_per_sheet: number
+          sheet_length: number
+          sheet_width: number
+          updated_at: string
+        }
+        Insert: {
+          cost_per_sheet?: number
+          created_at?: string
+          id?: string
+          ip_address: string
+          material_name: string
+          price_per_sheet?: number
+          sheet_length?: number
+          sheet_width?: number
+          updated_at?: string
+        }
+        Update: {
+          cost_per_sheet?: number
+          created_at?: string
+          id?: string
+          ip_address?: string
+          material_name?: string
+          price_per_sheet?: number
+          sheet_length?: number
+          sheet_width?: number
+          updated_at?: string
         }
         Relationships: []
       }

@@ -20,6 +20,7 @@ import { SheetOptimization } from "@/components/SheetOptimization";
 import { HardwareSelector } from "@/components/HardwareSelector";
 import { Announcements } from "@/components/Announcements";
 import { Calculator } from "@/components/Calculator";
+import { CompanySettings } from "@/components/CompanySettings";
 const MATERIAL_OPTIONS = [
 // Traditional Materials
 "White Melamine", "Azzano High Gloss", "Grain colored board", "Grain example board", "Glass 4mm", "Storm grey matt", "Grigio Matt", "Laricina Melamine", "Storm grey gloss", "Masonite 2.3", "Masonite 2.4", "Postform", "POSTFORM", "PVC Board 2.4", "Black Board Matt", "Gloss white board", "Postform Large", "Caraz", "Hardboard", "Luca polenta", "High Gloss melamine", "Plain Colored boards", "Iceberg white-Gloss", "Brookhill Matt", "Folkstone Grey Gloss", "Grigio", "Leatherwood", "Lucapolenta", "Lucaurban", "Masonite-Large", "PVC (2.4X1.2)", "PVC (2.75X1.83)", "High Gloss", "Superwood", "Congo Matt", "MDF Boards", "Shale Oak", "Black Matt", "Washed Shale", "Capuccino Board Matt", "Black Cherry board", "Harvard Cherry Board", "Granite", "Folkstone Grey Matt Board", "Calacatta Quartz", "Dunblane Grey Matt Board", "Color Board [TBA]", "Natural Oak Matt", "Plywood", "Camden Board Matt", "Cascade Board Matt", "Coimbra Board Matt", "Sahara Board Matt", "Quartz Star Gray", "Quartz (Star Range)", "American Walnut", "Quartz Slab", "Quartz Stone", "Royal Mahogany", "Calacatta Quartz Slab", "Calais Board", "Catalan Postform", "Dunblane gloss board", "Capuccino Gloss",
@@ -873,6 +874,7 @@ const Index = () => {
               }}
             />
             <MassCorrection items={items} onUpdateItems={handleUpdateMultipleItems} />
+            <CompanySettings />
           </div>
         </div>
 
