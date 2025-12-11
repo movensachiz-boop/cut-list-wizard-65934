@@ -196,12 +196,12 @@ export const LicenseGate = ({ children }: LicenseGateProps) => {
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Input
+              <Input
                   type="text"
                   placeholder="SRL-XXXX-XXXX-XXXX"
                   value={licenseKey}
                   onChange={(e) => setLicenseKey(e.target.value.toUpperCase())}
-                  className="text-center font-mono"
+                  className="text-center font-mono text-lg tracking-wider px-4"
                   autoFocus
                   maxLength={18}
                 />
