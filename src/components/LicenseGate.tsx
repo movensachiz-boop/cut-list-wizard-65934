@@ -203,7 +203,7 @@ export const LicenseGate = ({ children }: LicenseGateProps) => {
                   onChange={(e) => setLicenseKey(e.target.value.toUpperCase())}
                   className="text-center font-mono text-lg tracking-wider px-4"
                   autoFocus
-                  maxLength={18}
+                  maxLength={19}
                 />
                 <p className="text-sm text-muted-foreground text-center">
                   Contact your administrator for a license key
