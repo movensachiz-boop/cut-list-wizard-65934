@@ -11,6 +11,7 @@ import { exportCuttingListToCSV, exportToExcel, exportSheetLayoutToPDF } from "@
 import { exportToCNC, exportToDXF } from "@/lib/cncExport";
 import { saveOptimizationRun } from "@/lib/optimizationHistory";
 import { OptimizationHistory } from "./OptimizationHistory";
+import { QuoteGenerator } from "./QuoteGenerator";
 import { Loader2, Maximize2, Package, FileText, FileSpreadsheet, Printer, Cog, DollarSign, Zap, Scale, Target } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -474,6 +475,10 @@ export const SheetOptimization = ({ cuttingItems }: SheetOptimizationProps) => {
                 <FileText className="h-4 w-4" />
                 DXF
               </Button>
+              <QuoteGenerator 
+                cuttingItems={cuttingItems}
+                optimizedSheets={optimizedSheets}
+              />
             </div>
           </div>
           
