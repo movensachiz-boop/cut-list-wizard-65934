@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Building2, Image, DollarSign, Scissors, Save, Plus, Trash2, Settings } from "lucide-react";
+import { Building2, Image, DollarSign, Scissors, Save, Plus, Trash2, Settings, Upload, Download } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -313,6 +313,134 @@ export const CompanySettings = () => {
     }
   };
 
+  const handleMaterialCSVUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !ipAddress) return;
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const text = e.target?.result as string;
+        const lines = text.split("\n").filter(line => line.trim());
+        
+        // Skip header row if it contains text headers
+        const startIndex = lines[0].toLowerCase().includes("material") ? 1 : 0;
+        
+        const newMaterials: MaterialPrice[] = [];
+        for (let i = startIndex; i < lines.length; i++) {
+          const values = lines[i].split(",").map(v => v.trim().replace(/"/g, ""));
+          if (values.length >= 2) {
+            newMaterials.push({
+              material_name: values[0],
+              price_per_sheet: parseFloat(values[1]) || 0,
+              cost_per_sheet: parseFloat(values[2]) || 0,
+              sheet_length: parseInt(values[3]) || 2750,
+              sheet_width: parseInt(values[4]) || 1830,
+            });
+          }
+        }
+
+        if (newMaterials.length === 0) {
+          toast.error("No valid materials found in CSV");
+          return;
+        }
+
+        // Insert all materials
+        const { data, error } = await supabase
+          .from("ip_material_prices")
+          .upsert(
+            newMaterials.map(m => ({ ...m, ip_address: ipAddress })),
+            { onConflict: "ip_address,material_name" }
+          )
+          .select();
+
+        if (error) throw error;
+
+        await loadSettings();
+        toast.success(`Imported ${newMaterials.length} materials`);
+      } catch (err) {
+        console.error("Error importing CSV:", err);
+        toast.error("Failed to import CSV");
+      }
+    };
+    reader.readAsText(file);
+    event.target.value = "";
+  };
+
+  const handleEdgingCSVUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !ipAddress) return;
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const text = e.target?.result as string;
+        const lines = text.split("\n").filter(line => line.trim());
+        
+        // Skip header row if it contains text headers
+        const startIndex = lines[0].toLowerCase().includes("edging") ? 1 : 0;
+        
+        const newEdgings: EdgingPrice[] = [];
+        for (let i = startIndex; i < lines.length; i++) {
+          const values = lines[i].split(",").map(v => v.trim().replace(/"/g, ""));
+          if (values.length >= 2) {
+            newEdgings.push({
+              edging_name: values[0],
+              price_per_meter: parseFloat(values[1]) || 0,
+              cost_per_meter: parseFloat(values[2]) || 0,
+            });
+          }
+        }
+
+        if (newEdgings.length === 0) {
+          toast.error("No valid edging found in CSV");
+          return;
+        }
+
+        // Insert all edgings
+        const { data, error } = await supabase
+          .from("ip_edging_prices")
+          .upsert(
+            newEdgings.map(ed => ({ ...ed, ip_address: ipAddress })),
+            { onConflict: "ip_address,edging_name" }
+          )
+          .select();
+
+        if (error) throw error;
+
+        await loadSettings();
+        toast.success(`Imported ${newEdgings.length} edging prices`);
+      } catch (err) {
+        console.error("Error importing CSV:", err);
+        toast.error("Failed to import CSV");
+      }
+    };
+    reader.readAsText(file);
+    event.target.value = "";
+  };
+
+  const downloadMaterialTemplate = () => {
+    const csv = "material_name,price_per_sheet,cost_per_sheet,sheet_length,sheet_width\nWhite Melamine,50,35,2750,1830\nColorboard TBA,65,45,2750,1830";
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "material_prices_template.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const downloadEdgingTemplate = () => {
+    const csv = "edging_name,price_per_meter,cost_per_meter\nWhite,2.5,1.5\nColor,3.0,2.0";
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "edging_prices_template.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
@@ -403,8 +531,30 @@ export const CompanySettings = () => {
             <TabsContent value="materials" className="space-y-4">
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg">Material Prices</CardTitle>
-                  <CardDescription>Set prices per sheet for each material</CardDescription>
+                  <CardTitle className="text-lg flex items-center justify-between">
+                    <span>Material Prices</span>
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" onClick={downloadMaterialTemplate} className="gap-1">
+                        <Download className="h-3 w-3" />
+                        Template
+                      </Button>
+                      <label>
+                        <Button variant="outline" size="sm" className="gap-1 cursor-pointer" asChild>
+                          <span>
+                            <Upload className="h-3 w-3" />
+                            Import CSV
+                          </span>
+                        </Button>
+                        <input
+                          type="file"
+                          accept=".csv"
+                          onChange={handleMaterialCSVUpload}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
+                  </CardTitle>
+                  <CardDescription>Set prices per sheet for each material, or import from CSV</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {/* Add new material */}
@@ -540,8 +690,30 @@ export const CompanySettings = () => {
             <TabsContent value="edging" className="space-y-4">
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg">Edging Prices</CardTitle>
-                  <CardDescription>Set prices per meter for each edging type</CardDescription>
+                  <CardTitle className="text-lg flex items-center justify-between">
+                    <span>Edging Prices</span>
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" onClick={downloadEdgingTemplate} className="gap-1">
+                        <Download className="h-3 w-3" />
+                        Template
+                      </Button>
+                      <label>
+                        <Button variant="outline" size="sm" className="gap-1 cursor-pointer" asChild>
+                          <span>
+                            <Upload className="h-3 w-3" />
+                            Import CSV
+                          </span>
+                        </Button>
+                        <input
+                          type="file"
+                          accept=".csv"
+                          onChange={handleEdgingCSVUpload}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
+                  </CardTitle>
+                  <CardDescription>Set prices per meter for each edging type, or import from CSV</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {/* Add new edging */}
