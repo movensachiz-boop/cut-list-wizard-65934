@@ -2,9 +2,10 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Shield, AlertTriangle } from "lucide-react";
+import { Shield, AlertTriangle, Copy, Check } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface LicenseGateProps {
   children: React.ReactNode;
@@ -20,6 +21,16 @@ export const LicenseGate = ({ children }: LicenseGateProps) => {
   } | null>(null);
   const [logoutCountdown, setLogoutCountdown] = useState<number | null>(null);
   const [isBlocked, setIsBlocked] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyLicenseKey = async () => {
+    if (licenseKey) {
+      await navigator.clipboard.writeText(licenseKey);
+      setCopied(true);
+      toast.success("License key copied to clipboard");
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
 
   useEffect(() => {
     checkStoredLicense();
@@ -196,15 +207,35 @@ export const LicenseGate = ({ children }: LicenseGateProps) => {
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-              <Input
-                  type="text"
-                  placeholder="SRL-XXXX-XXXX-XXXX"
-                  value={licenseKey}
-                  onChange={(e) => setLicenseKey(e.target.value.toUpperCase())}
-                  className="text-center font-mono text-lg tracking-wider px-4"
-                  autoFocus
-                  maxLength={19}
-                />
+                <div className="flex gap-2">
+                  <Input
+                    type="text"
+                    placeholder="SRL-XXXX-XXXX-XXXX"
+                    value={licenseKey}
+                    onChange={(e) => setLicenseKey(e.target.value.toUpperCase())}
+                    className="text-center font-mono text-lg tracking-wider px-4 flex-1"
+                    autoFocus
+                    maxLength={19}
+                  />
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          size="icon"
+                          onClick={handleCopyLicenseKey}
+                          disabled={!licenseKey}
+                        >
+                          {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Copy license key</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
                 <p className="text-sm text-muted-foreground text-center">
                   Contact your administrator for a license key
                 </p>
