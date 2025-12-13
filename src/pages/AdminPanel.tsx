@@ -10,7 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Shield, Plus, Ban, Trash2, Key, Calendar, Building, Activity, Globe, ShieldBan, CheckCircle, LogOut, Megaphone, RefreshCw } from "lucide-react";
+import { Shield, Plus, Ban, Trash2, Key, Calendar, Building, Activity, Globe, ShieldBan, CheckCircle, LogOut, Megaphone, RefreshCw, Copy, Check } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -93,6 +94,14 @@ const AdminPanel = () => {
   const [expiryDate, setExpiryDate] = useState("");
   const [status, setStatus] = useState<'active' | 'trial'>('trial');
   const [notes, setNotes] = useState("");
+  const [copiedLicenseId, setCopiedLicenseId] = useState<string | null>(null);
+
+  const handleCopyLicenseKey = async (licenseKey: string, licenseId: string) => {
+    await navigator.clipboard.writeText(licenseKey);
+    setCopiedLicenseId(licenseId);
+    toast.success("License key copied to clipboard");
+    setTimeout(() => setCopiedLicenseId(null), 2000);
+  };
 
   useEffect(() => {
     checkAdminAndLoadData();
@@ -627,6 +636,27 @@ const AdminPanel = () => {
                           <div className="flex items-center gap-2">
                             <Key className="h-4 w-4 text-muted-foreground" />
                             <code className="text-xs bg-muted px-2 py-1 rounded">{license.license_key}</code>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-6 w-6 p-0"
+                                    onClick={() => handleCopyLicenseKey(license.license_key, license.id)}
+                                  >
+                                    {copiedLicenseId === license.id ? (
+                                      <Check className="h-3 w-3 text-green-500" />
+                                    ) : (
+                                      <Copy className="h-3 w-3" />
+                                    )}
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Copy license key</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
                           </div>
                         </TableCell>
                         <TableCell>
