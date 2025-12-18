@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import fastCutLogo from "@/assets/fast-cut-logo.png";
-import { Zap, Gauge, CheckCircle, Shield } from "lucide-react";
+import { Zap, Gauge, CheckCircle, Shield, Info } from "lucide-react";
 
 export const HeroSection = () => {
   
@@ -46,13 +46,22 @@ export const HeroSection = () => {
           © DATAPLEX PROPERTIES
         </p>
         
-        <Link 
-          to="/admin-login" 
-          className="inline-flex items-center gap-2 text-xs text-muted-foreground/50 hover:text-primary transition-colors mt-4"
-        >
-          <Shield className="h-3 w-3" />
-          Admin
-        </Link>
+        <div className="flex items-center gap-4 mt-4">
+          <Link 
+            to="/about" 
+            className="inline-flex items-center gap-2 text-xs text-muted-foreground/50 hover:text-primary transition-colors"
+          >
+            <Info className="h-3 w-3" />
+            About
+          </Link>
+          <Link 
+            to="/admin-login" 
+            className="inline-flex items-center gap-2 text-xs text-muted-foreground/50 hover:text-primary transition-colors"
+          >
+            <Shield className="h-3 w-3" />
+            Admin
+          </Link>
+        </div>
       </div>
     </div>
   );
