@@ -11,6 +11,7 @@ import AdminPanel from "./pages/AdminPanel";
 import AdminLogin from "./pages/AdminLogin";
 import TermsOfService from "./pages/TermsOfService";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
+import About from "./pages/About";
 
 const queryClient = new QueryClient();
 
@@ -32,9 +33,10 @@ const App = () => (
             </LicenseGate>
           } />
           
-          {/* Legal pages - public access */}
+          {/* Legal & info pages - public access */}
           <Route path="/terms" element={<TermsOfService />} />
           <Route path="/privacy" element={<PrivacyPolicy />} />
+          <Route path="/about" element={<About />} />
           
           {/* Catch-all */}
           <Route path="*" element={<NotFound />} />
