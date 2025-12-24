@@ -47,6 +47,10 @@ interface CompanyInfo {
   company_email: string;
   company_tax_no: string;
   company_address: string;
+  bank_name: string;
+  bank_account_name: string;
+  bank_account_number: string;
+  bank_branch: string;
 }
 
 export const CompanySettings = () => {
@@ -64,6 +68,10 @@ export const CompanySettings = () => {
     company_email: "",
     company_tax_no: "",
     company_address: "",
+    bank_name: "",
+    bank_account_name: "",
+    bank_account_number: "",
+    bank_branch: "",
   });
 
   // Material prices
@@ -128,6 +136,10 @@ export const CompanySettings = () => {
           company_email: companyData.company_email || "",
           company_tax_no: companyData.company_tax_no || "",
           company_address: companyData.company_address || "",
+          bank_name: companyData.bank_name || "",
+          bank_account_name: companyData.bank_account_name || "",
+          bank_account_number: companyData.bank_account_number || "",
+          bank_branch: companyData.bank_branch || "",
         });
       }
 
@@ -173,6 +185,10 @@ export const CompanySettings = () => {
           company_email: companyInfo.company_email,
           company_tax_no: companyInfo.company_tax_no,
           company_address: companyInfo.company_address,
+          bank_name: companyInfo.bank_name,
+          bank_account_name: companyInfo.bank_account_name,
+          bank_account_number: companyInfo.bank_account_number,
+          bank_branch: companyInfo.bank_branch,
         }, { onConflict: "ip_address" });
 
       if (error) throw error;
@@ -592,6 +608,53 @@ export const CompanySettings = () => {
                       placeholder="123 Main Street, Harare, Zimbabwe"
                     />
                   </div>
+                  
+                  <div className="pt-4 border-t">
+                    <h4 className="font-medium mb-3">Banking Details</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Bank Name</Label>
+                        <Input
+                          value={companyInfo.bank_name}
+                          onChange={(e) =>
+                            setCompanyInfo({ ...companyInfo, bank_name: e.target.value })
+                          }
+                          placeholder="First Bank"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Account Name</Label>
+                        <Input
+                          value={companyInfo.bank_account_name}
+                          onChange={(e) =>
+                            setCompanyInfo({ ...companyInfo, bank_account_name: e.target.value })
+                          }
+                          placeholder="Your Company Name"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Account Number</Label>
+                        <Input
+                          value={companyInfo.bank_account_number}
+                          onChange={(e) =>
+                            setCompanyInfo({ ...companyInfo, bank_account_number: e.target.value })
+                          }
+                          placeholder="1234567890"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Branch</Label>
+                        <Input
+                          value={companyInfo.bank_branch}
+                          onChange={(e) =>
+                            setCompanyInfo({ ...companyInfo, bank_branch: e.target.value })
+                          }
+                          placeholder="Main Branch"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  
                   <Button onClick={saveCompanyInfo} disabled={isSaving} className="gap-2">
                     <Save className="h-4 w-4" />
                     Save Company Info

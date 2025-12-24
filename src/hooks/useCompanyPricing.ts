@@ -23,6 +23,10 @@ interface CompanyInfo {
   company_email: string;
   company_tax_no: string;
   company_address: string;
+  bank_name: string;
+  bank_account_name: string;
+  bank_account_number: string;
+  bank_branch: string;
 }
 
 export const useCompanyPricing = () => {
@@ -73,6 +77,10 @@ export const useCompanyPricing = () => {
           company_email: companyData.company_email || "",
           company_tax_no: companyData.company_tax_no || "",
           company_address: companyData.company_address || "",
+          bank_name: companyData.bank_name || "",
+          bank_account_name: companyData.bank_account_name || "",
+          bank_account_number: companyData.bank_account_number || "",
+          bank_branch: companyData.bank_branch || "",
         });
       }
 
