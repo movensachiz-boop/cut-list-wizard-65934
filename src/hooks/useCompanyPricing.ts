@@ -93,15 +93,41 @@ export const useCompanyPricing = () => {
   };
 
   const getMaterialPrice = (materialName: string): MaterialPrice | null => {
-    return materialPrices.find(
-      (m) => m.material_name.toLowerCase() === materialName.toLowerCase()
-    ) || null;
+    const searchName = materialName.toLowerCase().trim();
+    
+    // Try exact match first
+    let match = materialPrices.find(
+      (m) => m.material_name.toLowerCase().trim() === searchName
+    );
+    
+    // Try partial match (material name contains search or search contains material name)
+    if (!match) {
+      match = materialPrices.find(
+        (m) => m.material_name.toLowerCase().includes(searchName) || 
+               searchName.includes(m.material_name.toLowerCase())
+      );
+    }
+    
+    return match || null;
   };
 
   const getEdgingPrice = (edgingName: string): EdgingPrice | null => {
-    return edgingPrices.find(
-      (e) => e.edging_name.toLowerCase() === edgingName.toLowerCase()
-    ) || null;
+    const searchName = edgingName.toLowerCase().trim();
+    
+    // Try exact match first
+    let match = edgingPrices.find(
+      (e) => e.edging_name.toLowerCase().trim() === searchName
+    );
+    
+    // Try partial match
+    if (!match) {
+      match = edgingPrices.find(
+        (e) => e.edging_name.toLowerCase().includes(searchName) || 
+               searchName.includes(e.edging_name.toLowerCase())
+      );
+    }
+    
+    return match || null;
   };
 
   const calculateEdgingLength = (
