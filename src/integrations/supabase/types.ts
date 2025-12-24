@@ -267,6 +267,7 @@ export type Database = {
       }
       ip_company_settings: {
         Row: {
+          company_address: string | null
           company_email: string | null
           company_fax: string | null
           company_logo_url: string | null
@@ -279,6 +280,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          company_address?: string | null
           company_email?: string | null
           company_fax?: string | null
           company_logo_url?: string | null
@@ -291,6 +293,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          company_address?: string | null
           company_email?: string | null
           company_fax?: string | null
           company_logo_url?: string | null

@@ -337,6 +337,7 @@ export const QuoteGenerator = ({ cuttingItems, optimizedSheets, cuttingListId }:
   <div class="header">
     <div class="quote-title">Quote - ${customerName || 'Customer'}</div>
     <div class="company-name">${companyInfo?.company_name || 'Your Company'}</div>
+    ${companyInfo?.company_address ? `<div class="company-address">${companyInfo.company_address}</div>` : ''}
     <div class="company-details">
       <span>Tel : ${companyInfo?.company_tel || ''}</span>
       <span>Fax : ${companyInfo?.company_fax || ''}</span>

@@ -22,6 +22,7 @@ interface CompanyInfo {
   company_fax: string;
   company_email: string;
   company_tax_no: string;
+  company_address: string;
 }
 
 export const useCompanyPricing = () => {
@@ -71,6 +72,7 @@ export const useCompanyPricing = () => {
           company_fax: companyData.company_fax || "",
           company_email: companyData.company_email || "",
           company_tax_no: companyData.company_tax_no || "",
+          company_address: companyData.company_address || "",
         });
       }
 

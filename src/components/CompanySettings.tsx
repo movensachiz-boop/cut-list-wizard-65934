@@ -46,6 +46,7 @@ interface CompanyInfo {
   company_fax: string;
   company_email: string;
   company_tax_no: string;
+  company_address: string;
 }
 
 export const CompanySettings = () => {
@@ -62,6 +63,7 @@ export const CompanySettings = () => {
     company_fax: "",
     company_email: "",
     company_tax_no: "",
+    company_address: "",
   });
 
   // Material prices
@@ -125,6 +127,7 @@ export const CompanySettings = () => {
           company_fax: companyData.company_fax || "",
           company_email: companyData.company_email || "",
           company_tax_no: companyData.company_tax_no || "",
+          company_address: companyData.company_address || "",
         });
       }
 
@@ -169,6 +172,7 @@ export const CompanySettings = () => {
           company_fax: companyInfo.company_fax,
           company_email: companyInfo.company_email,
           company_tax_no: companyInfo.company_tax_no,
+          company_address: companyInfo.company_address,
         }, { onConflict: "ip_address" });
 
       if (error) throw error;
@@ -577,6 +581,16 @@ export const CompanySettings = () => {
                         placeholder="1234567890"
                       />
                     </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Company Address</Label>
+                    <Input
+                      value={companyInfo.company_address}
+                      onChange={(e) =>
+                        setCompanyInfo({ ...companyInfo, company_address: e.target.value })
+                      }
+                      placeholder="123 Main Street, Harare, Zimbabwe"
+                    />
                   </div>
                   <Button onClick={saveCompanyInfo} disabled={isSaving} className="gap-2">
                     <Save className="h-4 w-4" />
