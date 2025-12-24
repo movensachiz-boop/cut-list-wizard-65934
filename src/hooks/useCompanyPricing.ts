@@ -27,6 +27,7 @@ interface CompanyInfo {
   bank_account_name: string;
   bank_account_number: string;
   bank_branch: string;
+  quote_validity_days: number;
 }
 
 export const useCompanyPricing = () => {
@@ -81,6 +82,7 @@ export const useCompanyPricing = () => {
           bank_account_name: companyData.bank_account_name || "",
           bank_account_number: companyData.bank_account_number || "",
           bank_branch: companyData.bank_branch || "",
+          quote_validity_days: companyData.quote_validity_days ?? 30,
         });
       }
 
