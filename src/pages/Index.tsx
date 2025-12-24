@@ -1346,7 +1346,7 @@ const Index = () => {
         {/* Sheet Optimization Section */}
         {items.length > 0 && (
           <div className="mt-10">
-            <SheetOptimization cuttingItems={items} />
+            <SheetOptimization cuttingItems={items} cuttingListId={currentCuttingListId} />
           </div>
         )}
 

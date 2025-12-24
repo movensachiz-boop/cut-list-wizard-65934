@@ -9,6 +9,7 @@ import { FileText, Download, Calculator } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useCompanyPricing } from "@/hooks/useCompanyPricing";
 import { Sheet, calculateTotalStats } from "@/lib/sheetOptimizer";
+import { supabase } from "@/integrations/supabase/client";
 
 interface CuttingItem {
   id: string;
@@ -24,29 +25,41 @@ interface CuttingItem {
 interface QuoteGeneratorProps {
   cuttingItems: CuttingItem[];
   optimizedSheets: Sheet[];
+  cuttingListId?: string | null;
 }
 
 interface QuoteLineItem {
-  description: string;
-  quantity: number;
-  unit: string;
-  unitPrice: number;
-  total: number;
+  name: string;
+  pricePerUnit: number;
+  unitDescription: string;
+  units: number;
+  linePrice: number;
 }
 
-export const QuoteGenerator = ({ cuttingItems, optimizedSheets }: QuoteGeneratorProps) => {
+interface HardwareEntry {
+  id: string;
+  quantity: number;
+  custom_name: string | null;
+  hardware_items: {
+    id: string;
+    name: string;
+    price: number | null;
+  } | null;
+}
+
+export const QuoteGenerator = ({ cuttingItems, optimizedSheets, cuttingListId }: QuoteGeneratorProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
-  const [customerEmail, setCustomerEmail] = useState("");
+  const [customerTaxNo, setCustomerTaxNo] = useState("");
+  const [representative, setRepresentative] = useState("");
+  const [dateRequired, setDateRequired] = useState("");
   const [quoteNotes, setQuoteNotes] = useState("");
-  const [taxRate, setTaxRate] = useState(15);
+  const [hardwareEntries, setHardwareEntries] = useState<HardwareEntry[]>([]);
   
   const { toast } = useToast();
   const {
     companyInfo,
-    materialPrices,
-    edgingPrices,
     getMaterialPrice,
     getEdgingPrice,
     calculateEdgingLength,
@@ -55,8 +68,45 @@ export const QuoteGenerator = ({ cuttingItems, optimizedSheets }: QuoteGenerator
   } = useCompanyPricing();
 
   useEffect(() => {
-    if (isOpen) refreshPricing();
+    if (isOpen) {
+      refreshPricing();
+      loadHardwareEntries();
+      // Set default date required to today
+      if (!dateRequired) {
+        const today = new Date().toLocaleDateString('en-GB', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric'
+        });
+        setDateRequired(today);
+      }
+    }
   }, [isOpen, refreshPricing]);
+
+  const loadHardwareEntries = async () => {
+    if (!cuttingListId) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('hardware_entries')
+        .select(`
+          id,
+          quantity,
+          custom_name,
+          hardware_items (
+            id,
+            name,
+            price
+          )
+        `)
+        .eq('cutting_list_id', cuttingListId);
+
+      if (error) throw error;
+      setHardwareEntries((data as HardwareEntry[]) || []);
+    } catch (error) {
+      console.error('Error loading hardware entries:', error);
+    }
+  };
 
   const calculateQuoteItems = (): QuoteLineItem[] => {
     const lineItems: QuoteLineItem[] = [];
@@ -64,7 +114,6 @@ export const QuoteGenerator = ({ cuttingItems, optimizedSheets }: QuoteGenerator
     // Group sheets by material (get material from placed parts)
     const sheetsByMaterial = new Map<string, number>();
     optimizedSheets.forEach(sheet => {
-      // Get the primary material from the first part on this sheet
       const primaryMaterial = sheet.parts[0]?.material || 'Unknown Material';
       const count = sheetsByMaterial.get(primaryMaterial) || 0;
       sheetsByMaterial.set(primaryMaterial, count + 1);
@@ -73,24 +122,17 @@ export const QuoteGenerator = ({ cuttingItems, optimizedSheets }: QuoteGenerator
     // Add material costs (sheets)
     sheetsByMaterial.forEach((count, material) => {
       const materialPrice = getMaterialPrice(material);
-      if (materialPrice) {
-        lineItems.push({
-          description: `${material} Sheet (${materialPrice.sheet_length}x${materialPrice.sheet_width}mm)`,
-          quantity: count,
-          unit: "sheet",
-          unitPrice: materialPrice.price_per_sheet,
-          total: count * materialPrice.price_per_sheet,
-        });
-      } else {
-        // If no price found, add with zero price
-        lineItems.push({
-          description: `${material} Sheet`,
-          quantity: count,
-          unit: "sheet",
-          unitPrice: 0,
-          total: 0,
-        });
-      }
+      const sheetDimensions = materialPrice 
+        ? ` (${materialPrice.sheet_length} mm x ${materialPrice.sheet_width} mm)`
+        : '';
+      
+      lineItems.push({
+        name: `${material}${sheetDimensions}`,
+        pricePerUnit: materialPrice?.price_per_sheet || 0,
+        unitDescription: "Per Sheet",
+        units: count,
+        linePrice: count * (materialPrice?.price_per_sheet || 0),
+      });
     });
     
     // Calculate edging by material
@@ -106,23 +148,29 @@ export const QuoteGenerator = ({ cuttingItems, optimizedSheets }: QuoteGenerator
     // Add edging costs
     edgingByMaterial.forEach((totalMeters, edgingMaterial) => {
       const edgingPrice = getEdgingPrice(edgingMaterial);
-      if (edgingPrice) {
-        lineItems.push({
-          description: `${edgingMaterial}`,
-          quantity: Math.ceil(totalMeters * 100) / 100,
-          unit: "m",
-          unitPrice: edgingPrice.price_per_meter,
-          total: totalMeters * edgingPrice.price_per_meter,
-        });
-      } else {
-        lineItems.push({
-          description: `${edgingMaterial}`,
-          quantity: Math.ceil(totalMeters * 100) / 100,
-          unit: "m",
-          unitPrice: 0,
-          total: 0,
-        });
-      }
+      const roundedMeters = Math.round(totalMeters * 1000) / 1000;
+      
+      lineItems.push({
+        name: edgingMaterial,
+        pricePerUnit: edgingPrice?.price_per_meter || 0,
+        unitDescription: "Per Meter",
+        units: roundedMeters,
+        linePrice: roundedMeters * (edgingPrice?.price_per_meter || 0),
+      });
+    });
+
+    // Add hardware items
+    hardwareEntries.forEach(entry => {
+      const itemName = entry.hardware_items?.name || entry.custom_name || 'Unknown Item';
+      const price = entry.hardware_items?.price || 0;
+      
+      lineItems.push({
+        name: itemName,
+        pricePerUnit: price,
+        unitDescription: "Per Unit",
+        units: entry.quantity,
+        linePrice: entry.quantity * price,
+      });
     });
     
     return lineItems;
@@ -139,21 +187,12 @@ export const QuoteGenerator = ({ cuttingItems, optimizedSheets }: QuoteGenerator
     }
 
     const lineItems = calculateQuoteItems();
-    const subtotal = lineItems.reduce((sum, item) => sum + item.total, 0);
-    const taxAmount = subtotal * (taxRate / 100);
-    const total = subtotal + taxAmount;
-    const stats = calculateTotalStats(optimizedSheets);
+    const subtotal = lineItems.reduce((sum, item) => sum + item.linePrice, 0);
     
-    const quoteNumber = `QT-${Date.now().toString(36).toUpperCase()}`;
     const quoteDate = new Date().toLocaleDateString('en-GB', { 
       day: '2-digit', 
-      month: 'short', 
+      month: '2-digit', 
       year: 'numeric' 
-    });
-    const validUntil = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-GB', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric'
     });
 
     const printWindow = window.open('', '_blank');
@@ -170,260 +209,232 @@ export const QuoteGenerator = ({ cuttingItems, optimizedSheets }: QuoteGenerator
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Quote ${quoteNumber}</title>
+  <title>Quote - ${customerName || 'Customer'}</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { 
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-      padding: 40px; 
+      font-family: Arial, sans-serif; 
+      padding: 30px; 
       color: #333;
-      line-height: 1.6;
+      font-size: 12px;
+      line-height: 1.4;
     }
     .header { 
-      display: flex; 
-      justify-content: space-between; 
-      align-items: flex-start;
-      margin-bottom: 40px; 
-      padding-bottom: 20px;
-      border-bottom: 3px solid #e74c3c;
+      text-align: center;
+      margin-bottom: 20px;
+      padding-bottom: 15px;
+      border-bottom: 2px solid #333;
     }
-    .company-info { flex: 1; }
-    .company-logo { 
-      max-width: 180px; 
-      max-height: 80px; 
-      object-fit: contain;
+    .quote-title {
+      font-size: 24px;
+      font-weight: bold;
+      margin-bottom: 15px;
+    }
+    .company-name {
+      font-size: 18px;
+      font-weight: bold;
       margin-bottom: 10px;
     }
-    .company-name { 
-      font-size: 28px; 
-      font-weight: bold; 
-      color: #e74c3c;
-      margin-bottom: 5px;
-    }
-    .quote-title-section { text-align: right; }
-    .quote-title { 
-      font-size: 36px; 
-      font-weight: bold; 
-      color: #333;
+    .company-details {
+      display: flex;
+      justify-content: center;
+      gap: 30px;
+      flex-wrap: wrap;
       margin-bottom: 10px;
     }
-    .quote-number { 
-      font-size: 14px; 
-      color: #666;
-      background: #f5f5f5;
-      padding: 8px 15px;
-      border-radius: 4px;
-      display: inline-block;
+    .company-details span {
+      white-space: nowrap;
     }
-    .meta-section {
+    .client-section {
       display: flex;
       justify-content: space-between;
-      margin-bottom: 30px;
-      gap: 40px;
+      margin-bottom: 20px;
+      gap: 20px;
     }
-    .meta-box {
+    .client-info {
       flex: 1;
-      background: #f9f9f9;
-      padding: 20px;
-      border-radius: 8px;
-      border-left: 4px solid #e74c3c;
     }
-    .meta-box h3 {
-      font-size: 12px;
-      text-transform: uppercase;
-      color: #888;
-      margin-bottom: 10px;
-      letter-spacing: 1px;
+    .client-row {
+      display: flex;
+      margin-bottom: 5px;
     }
-    .meta-box p {
-      font-size: 14px;
-      margin: 5px 0;
+    .client-label {
+      min-width: 120px;
+      font-weight: normal;
     }
-    .meta-box strong { color: #333; }
+    .client-value {
+      flex: 1;
+    }
     table { 
       width: 100%; 
       border-collapse: collapse; 
-      margin: 30px 0;
+      margin: 20px 0;
     }
     th { 
-      background: #e74c3c; 
-      color: white; 
-      padding: 15px 12px; 
+      background: #f0f0f0; 
+      padding: 10px 8px; 
       text-align: left;
-      font-weight: 600;
-      font-size: 13px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
+      font-weight: bold;
+      border: 1px solid #ccc;
     }
-    th:last-child, td:last-child { text-align: right; }
+    th:nth-child(2), th:nth-child(4), th:nth-child(5) { text-align: right; }
     td { 
-      padding: 15px 12px; 
-      border-bottom: 1px solid #eee;
-      font-size: 14px;
+      padding: 8px; 
+      border: 1px solid #ccc;
     }
-    tr:nth-child(even) { background: #fafafa; }
-    tr:hover { background: #fff5f5; }
-    .summary-section {
+    td:nth-child(2), td:nth-child(4), td:nth-child(5) { text-align: right; }
+    .totals-section {
       display: flex;
       justify-content: space-between;
-      margin-top: 30px;
+      margin-top: 20px;
     }
-    .project-summary {
-      flex: 1;
-      background: #f0f7ff;
-      padding: 20px;
-      border-radius: 8px;
-      margin-right: 30px;
+    .signature-box {
+      width: 250px;
     }
-    .project-summary h4 {
-      color: #2c5282;
+    .signature-row {
+      display: flex;
       margin-bottom: 15px;
-      font-size: 14px;
-      text-transform: uppercase;
     }
-    .project-summary p {
-      font-size: 13px;
-      margin: 5px 0;
-      color: #4a5568;
+    .signature-label {
+      min-width: 80px;
     }
-    .totals { 
-      width: 320px;
-      background: #f9f9f9;
-      padding: 20px;
-      border-radius: 8px;
+    .signature-line {
+      flex: 1;
+      border-bottom: 1px solid #333;
+      margin-left: 5px;
     }
-    .totals-row { 
-      display: flex; 
-      justify-content: space-between; 
-      padding: 10px 0;
-      font-size: 14px;
+    .totals-box {
+      width: 250px;
     }
-    .totals-row.subtotal { border-bottom: 1px solid #ddd; }
-    .totals-row.total { 
-      font-size: 20px; 
+    .total-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 5px 0;
+    }
+    .total-row.grand-total {
       font-weight: bold;
-      color: #e74c3c;
-      border-top: 2px solid #e74c3c;
-      margin-top: 10px;
-      padding-top: 15px;
-    }
-    .notes-section {
-      margin-top: 40px;
-      padding: 20px;
-      background: #fffef0;
-      border-radius: 8px;
-      border-left: 4px solid #f0c36d;
-    }
-    .notes-section h4 {
-      color: #8b6914;
-      margin-bottom: 10px;
       font-size: 14px;
+      border-top: 1px solid #333;
+      margin-top: 5px;
+      padding-top: 10px;
     }
-    .notes-section p {
-      font-size: 13px;
+    .footer {
+      margin-top: 30px;
+      text-align: center;
+      font-size: 11px;
       color: #666;
     }
-    .footer { 
-      margin-top: 50px; 
-      text-align: center; 
-      font-size: 12px; 
-      color: #888;
-      padding-top: 20px;
-      border-top: 1px solid #eee;
+    .company-footer {
+      font-weight: bold;
+      margin-bottom: 5px;
     }
-    .footer p { margin: 5px 0; }
     @media print {
-      body { padding: 20px; }
-      .header { page-break-after: avoid; }
-      table { page-break-inside: auto; }
-      tr { page-break-inside: avoid; }
+      body { padding: 15px; }
     }
   </style>
 </head>
 <body>
   <div class="header">
-    <div class="company-info">
-      ${companyInfo?.company_logo_url ? `<img src="${companyInfo.company_logo_url}" alt="Company Logo" class="company-logo" />` : ''}
-      <div class="company-name">${companyInfo?.company_name || 'Your Company'}</div>
+    <div class="quote-title">Quote - ${customerName || 'Customer'}</div>
+    <div class="company-name">${companyInfo?.company_name || 'Your Company'}</div>
+    <div class="company-details">
+      <span>Tel : +263780555268 /+263718456811</span>
+      <span>Fax : www.abvzimbabwe.com</span>
     </div>
-    <div class="quote-title-section">
-      <div class="quote-title">QUOTATION</div>
-      <div class="quote-number">${quoteNumber}</div>
+    <div class="company-details">
+      <span>Email : artipelbusinessventures.com</span>
+      <span>Client Tax No. : 4536A0352024</span>
     </div>
   </div>
 
-  <div class="meta-section">
-    <div class="meta-box">
-      <h3>Quote To</h3>
-      <p><strong>${customerName || 'Customer Name'}</strong></p>
-      ${customerPhone ? `<p>Phone: ${customerPhone}</p>` : ''}
-      ${customerEmail ? `<p>Email: ${customerEmail}</p>` : ''}
+  <div class="client-section">
+    <div class="client-info">
+      <div class="client-row">
+        <span class="client-label">Representative :</span>
+        <span class="client-value">${representative || ''}</span>
+      </div>
+      <div class="client-row">
+        <span class="client-label">Client Cell Phone :</span>
+        <span class="client-value">${customerPhone || ''}</span>
+      </div>
     </div>
-    <div class="meta-box">
-      <h3>Quote Details</h3>
-      <p><strong>Date:</strong> ${quoteDate}</p>
-      <p><strong>Valid Until:</strong> ${validUntil}</p>
-      <p><strong>Total Items:</strong> ${cuttingItems.length}</p>
+    <div class="client-info">
+      <div class="client-row">
+        <span class="client-label">Tax No. :</span>
+        <span class="client-value">TIN : ${customerTaxNo || ''}</span>
+      </div>
+      <div class="client-row">
+        <span class="client-label">Reference :</span>
+        <span class="client-value"></span>
+      </div>
+      <div class="client-row">
+        <span class="client-label">Date Required :</span>
+        <span class="client-value">${dateRequired || quoteDate}</span>
+      </div>
     </div>
   </div>
 
   <table>
     <thead>
       <tr>
-        <th style="width: 50%">Description</th>
-        <th style="width: 15%">Quantity</th>
-        <th style="width: 10%">Unit</th>
-        <th style="width: 12%">Unit Price</th>
-        <th style="width: 13%">Total</th>
+        <th>Name</th>
+        <th>Price per Unit</th>
+        <th>Unit Description</th>
+        <th>Units</th>
+        <th>Line Price</th>
       </tr>
     </thead>
     <tbody>
       ${lineItems.map(item => `
         <tr>
-          <td>${item.description}</td>
-          <td>${item.quantity}</td>
-          <td>${item.unit}</td>
-          <td>$${item.unitPrice.toFixed(2)}</td>
-          <td>$${item.total.toFixed(2)}</td>
+          <td>${item.name}</td>
+          <td>US$${item.pricePerUnit.toFixed(2)}</td>
+          <td>${item.unitDescription}</td>
+          <td>${item.units}</td>
+          <td>US$${item.linePrice.toFixed(2)}</td>
         </tr>
       `).join('')}
     </tbody>
   </table>
 
-  <div class="summary-section">
-    <div class="project-summary">
-      <h4>Project Summary</h4>
-      <p><strong>Total Sheets:</strong> ${stats.totalSheets}</p>
-      <p><strong>Total Area:</strong> ${(stats.totalArea / 1000000).toFixed(2)} m²</p>
-      <p><strong>Material Usage:</strong> ${(100 - stats.averageWastePercentage).toFixed(1)}%</p>
-      <p><strong>Waste:</strong> ${stats.averageWastePercentage.toFixed(1)}%</p>
+  <div class="totals-section">
+    <div class="signature-box">
+      <div class="company-footer">${companyInfo?.company_name || 'Your Company'}</div>
+      <div class="signature-row">
+        <span class="signature-label">Date:</span>
+        <span class="signature-line"></span>
+      </div>
+      <div class="signature-row">
+        <span class="signature-label">Name:</span>
+        <span class="signature-line"></span>
+      </div>
+      <div class="signature-row">
+        <span class="signature-label">Signature:</span>
+        <span class="signature-line"></span>
+      </div>
     </div>
-    <div class="totals">
-      <div class="totals-row subtotal">
-        <span>Subtotal</span>
-        <span>$${subtotal.toFixed(2)}</span>
+    <div class="totals-box">
+      <div class="total-row">
+        <span>Sub Total:</span>
+        <span>US$${subtotal.toFixed(2)}</span>
       </div>
-      <div class="totals-row">
-        <span>Tax (${taxRate}%)</span>
-        <span>$${taxAmount.toFixed(2)}</span>
-      </div>
-      <div class="totals-row total">
-        <span>TOTAL</span>
-        <span>$${total.toFixed(2)}</span>
+      <div class="total-row grand-total">
+        <span>Grand Total:</span>
+        <span>US$${subtotal.toFixed(2)}</span>
       </div>
     </div>
   </div>
 
   ${quoteNotes ? `
-    <div class="notes-section">
-      <h4>Notes</h4>
-      <p>${quoteNotes.replace(/\n/g, '<br>')}</p>
+    <div style="margin-top: 20px; padding: 10px; background: #f9f9f9; border-left: 3px solid #333;">
+      <strong>Notes:</strong><br>
+      ${quoteNotes.replace(/\n/g, '<br>')}
     </div>
   ` : ''}
 
   <div class="footer">
-    <p>Thank you for your business</p>
-    <p>This quote is valid for 30 days from the date of issue</p>
+    <div class="company-footer">${companyInfo?.company_name || 'Your Company'}</div>
+    <div>${quoteDate}</div>
   </div>
 
   <script>
@@ -447,9 +458,7 @@ export const QuoteGenerator = ({ cuttingItems, optimizedSheets }: QuoteGenerator
   };
 
   const lineItems = optimizedSheets.length > 0 ? calculateQuoteItems() : [];
-  const subtotal = lineItems.reduce((sum, item) => sum + item.total, 0);
-  const taxAmount = subtotal * (taxRate / 100);
-  const total = subtotal + taxAmount;
+  const subtotal = lineItems.reduce((sum, item) => sum + item.linePrice, 0);
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -475,19 +484,28 @@ export const QuoteGenerator = ({ cuttingItems, optimizedSheets }: QuoteGenerator
           <div className="space-y-6">
             {/* Customer Information */}
             <Card className="p-4">
-              <h3 className="font-semibold mb-4">Customer Information</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <h3 className="font-semibold mb-4">Client Information</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="customer-name">Customer Name</Label>
+                  <Label htmlFor="customer-name">Client Name</Label>
                   <Input
                     id="customer-name"
                     value={customerName}
                     onChange={(e) => setCustomerName(e.target.value)}
-                    placeholder="Enter customer name"
+                    placeholder="Enter client name"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="customer-phone">Phone</Label>
+                  <Label htmlFor="representative">Representative</Label>
+                  <Input
+                    id="representative"
+                    value={representative}
+                    onChange={(e) => setRepresentative(e.target.value)}
+                    placeholder="Enter representative name"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="customer-phone">Cell Phone</Label>
                   <Input
                     id="customer-phone"
                     value={customerPhone}
@@ -496,13 +514,21 @@ export const QuoteGenerator = ({ cuttingItems, optimizedSheets }: QuoteGenerator
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="customer-email">Email</Label>
+                  <Label htmlFor="customer-tax">Tax No. (TIN)</Label>
                   <Input
-                    id="customer-email"
-                    type="email"
-                    value={customerEmail}
-                    onChange={(e) => setCustomerEmail(e.target.value)}
-                    placeholder="Enter email"
+                    id="customer-tax"
+                    value={customerTaxNo}
+                    onChange={(e) => setCustomerTaxNo(e.target.value)}
+                    placeholder="Enter tax number"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="date-required">Date Required</Label>
+                  <Input
+                    id="date-required"
+                    value={dateRequired}
+                    onChange={(e) => setDateRequired(e.target.value)}
+                    placeholder="DD/MM/YYYY"
                   />
                 </div>
               </div>
@@ -522,21 +548,21 @@ export const QuoteGenerator = ({ cuttingItems, optimizedSheets }: QuoteGenerator
                     <table className="w-full">
                       <thead className="bg-muted">
                         <tr>
-                          <th className="text-left p-3 font-medium">Description</th>
-                          <th className="text-right p-3 font-medium">Qty</th>
-                          <th className="text-center p-3 font-medium">Unit</th>
-                          <th className="text-right p-3 font-medium">Unit Price</th>
-                          <th className="text-right p-3 font-medium">Total</th>
+                          <th className="text-left p-3 font-medium">Name</th>
+                          <th className="text-right p-3 font-medium">Price per Unit</th>
+                          <th className="text-center p-3 font-medium">Unit Description</th>
+                          <th className="text-right p-3 font-medium">Units</th>
+                          <th className="text-right p-3 font-medium">Line Price</th>
                         </tr>
                       </thead>
                       <tbody>
                         {lineItems.map((item, index) => (
                           <tr key={index} className="border-t">
-                            <td className="p-3">{item.description}</td>
-                            <td className="p-3 text-right">{item.quantity}</td>
-                            <td className="p-3 text-center">{item.unit}</td>
-                            <td className="p-3 text-right">${item.unitPrice.toFixed(2)}</td>
-                            <td className="p-3 text-right font-medium">${item.total.toFixed(2)}</td>
+                            <td className="p-3">{item.name}</td>
+                            <td className="p-3 text-right">US${item.pricePerUnit.toFixed(2)}</td>
+                            <td className="p-3 text-center">{item.unitDescription}</td>
+                            <td className="p-3 text-right">{item.units}</td>
+                            <td className="p-3 text-right font-medium">US${item.linePrice.toFixed(2)}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -546,27 +572,12 @@ export const QuoteGenerator = ({ cuttingItems, optimizedSheets }: QuoteGenerator
                   <div className="flex justify-end mt-4">
                     <div className="w-64 space-y-2">
                       <div className="flex justify-between text-sm">
-                        <span>Subtotal:</span>
-                        <span>${subtotal.toFixed(2)}</span>
-                      </div>
-                      <div className="flex justify-between text-sm items-center gap-2">
-                        <span>Tax:</span>
-                        <div className="flex items-center gap-1">
-                          <Input
-                            type="number"
-                            value={taxRate}
-                            onChange={(e) => setTaxRate(Number(e.target.value))}
-                            className="w-16 h-7 text-right"
-                            min={0}
-                            max={100}
-                          />
-                          <span>%</span>
-                        </div>
-                        <span>${taxAmount.toFixed(2)}</span>
+                        <span>Sub Total:</span>
+                        <span>US${subtotal.toFixed(2)}</span>
                       </div>
                       <div className="flex justify-between font-bold text-lg border-t pt-2">
-                        <span>Total:</span>
-                        <span className="text-primary">${total.toFixed(2)}</span>
+                        <span>Grand Total:</span>
+                        <span className="text-primary">US${subtotal.toFixed(2)}</span>
                       </div>
                     </div>
                   </div>

@@ -27,9 +27,10 @@ interface SheetOptimizationProps {
     edgingMaterial: string;
     notes?: string;
   }>;
+  cuttingListId?: string | null;
 }
 
-export const SheetOptimization = ({ cuttingItems }: SheetOptimizationProps) => {
+export const SheetOptimization = ({ cuttingItems, cuttingListId }: SheetOptimizationProps) => {
   const [sheetType, setSheetType] = useState<SheetType>('melamine');
   const [kerf, setKerf] = useState(3);
   const [allowRotation, setAllowRotation] = useState(true);
@@ -593,6 +594,7 @@ export const SheetOptimization = ({ cuttingItems }: SheetOptimizationProps) => {
               <QuoteGenerator 
                 cuttingItems={cuttingItems}
                 optimizedSheets={optimizedSheets}
+                cuttingListId={cuttingListId}
               />
             </div>
           </div>
