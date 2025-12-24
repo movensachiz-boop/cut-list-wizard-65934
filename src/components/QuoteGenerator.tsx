@@ -49,6 +49,7 @@ interface HardwareEntry {
 
 export const QuoteGenerator = ({ cuttingItems, optimizedSheets, cuttingListId }: QuoteGeneratorProps) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [quoteNumber, setQuoteNumber] = useState("");
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [customerTaxNo, setCustomerTaxNo] = useState("");
@@ -67,10 +68,21 @@ export const QuoteGenerator = ({ cuttingItems, optimizedSheets, cuttingListId }:
     refreshPricing,
   } = useCompanyPricing();
 
+  const generateQuoteNumber = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const random = String(Math.floor(Math.random() * 10000)).padStart(4, '0');
+    return `QT-${year}${month}${day}-${random}`;
+  };
+
   useEffect(() => {
     if (isOpen) {
       refreshPricing();
       loadHardwareEntries();
+      // Generate new quote number
+      setQuoteNumber(generateQuoteNumber());
       // Set default date required to today
       if (!dateRequired) {
         const today = new Date().toLocaleDateString('en-GB', {
@@ -365,8 +377,8 @@ export const QuoteGenerator = ({ cuttingItems, optimizedSheets, cuttingListId }:
         <span class="client-value">TIN : ${customerTaxNo || ''}</span>
       </div>
       <div class="client-row">
-        <span class="client-label">Reference :</span>
-        <span class="client-value"></span>
+        <span class="client-label">Quote No. :</span>
+        <span class="client-value">${quoteNumber}</span>
       </div>
       <div class="client-row">
         <span class="client-label">Date Required :</span>
@@ -493,6 +505,12 @@ export const QuoteGenerator = ({ cuttingItems, optimizedSheets, cuttingListId }:
           </div>
         ) : (
           <div className="space-y-6">
+            {/* Quote Number */}
+            <div className="flex items-center justify-between bg-muted/50 p-3 rounded-lg">
+              <span className="text-sm text-muted-foreground">Quote Number:</span>
+              <span className="font-mono font-semibold">{quoteNumber}</span>
+            </div>
+
             {/* Customer Information */}
             <Card className="p-4">
               <h3 className="font-semibold mb-4">Client Information</h3>
