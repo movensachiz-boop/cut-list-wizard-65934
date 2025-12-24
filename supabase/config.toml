@@ -2,3 +2,15 @@ project_id = "jjhmsybgbklcdsvgztnt"
 
 [functions.manage-licenses]
 verify_jwt = false
+
+[functions.analyze-image]
+verify_jwt = false
+
+[functions.ai-assistant]
+verify_jwt = false
+
+[functions.match-hardware]
+verify_jwt = false
+
+[functions.smart-search]
+verify_jwt = false
