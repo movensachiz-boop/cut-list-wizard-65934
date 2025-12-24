@@ -42,6 +42,10 @@ interface EdgingPrice {
 interface CompanyInfo {
   company_name: string;
   company_logo_url: string;
+  company_tel: string;
+  company_fax: string;
+  company_email: string;
+  company_tax_no: string;
 }
 
 export const CompanySettings = () => {
@@ -54,6 +58,10 @@ export const CompanySettings = () => {
   const [companyInfo, setCompanyInfo] = useState<CompanyInfo>({
     company_name: "",
     company_logo_url: "",
+    company_tel: "",
+    company_fax: "",
+    company_email: "",
+    company_tax_no: "",
   });
 
   // Material prices
@@ -113,6 +121,10 @@ export const CompanySettings = () => {
         setCompanyInfo({
           company_name: companyData.company_name || "",
           company_logo_url: companyData.company_logo_url || "",
+          company_tel: companyData.company_tel || "",
+          company_fax: companyData.company_fax || "",
+          company_email: companyData.company_email || "",
+          company_tax_no: companyData.company_tax_no || "",
         });
       }
 
@@ -153,6 +165,10 @@ export const CompanySettings = () => {
           ip_address: ipAddress,
           company_name: companyInfo.company_name,
           company_logo_url: companyInfo.company_logo_url,
+          company_tel: companyInfo.company_tel,
+          company_fax: companyInfo.company_fax,
+          company_email: companyInfo.company_email,
+          company_tax_no: companyInfo.company_tax_no,
         }, { onConflict: "ip_address" });
 
       if (error) throw error;
@@ -519,6 +535,48 @@ export const CompanySettings = () => {
                         />
                       </div>
                     )}
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Telephone</Label>
+                      <Input
+                        value={companyInfo.company_tel}
+                        onChange={(e) =>
+                          setCompanyInfo({ ...companyInfo, company_tel: e.target.value })
+                        }
+                        placeholder="+263 780 555 268"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Fax / Website</Label>
+                      <Input
+                        value={companyInfo.company_fax}
+                        onChange={(e) =>
+                          setCompanyInfo({ ...companyInfo, company_fax: e.target.value })
+                        }
+                        placeholder="www.example.com"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Email</Label>
+                      <Input
+                        value={companyInfo.company_email}
+                        onChange={(e) =>
+                          setCompanyInfo({ ...companyInfo, company_email: e.target.value })
+                        }
+                        placeholder="info@example.com"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Tax Number</Label>
+                      <Input
+                        value={companyInfo.company_tax_no}
+                        onChange={(e) =>
+                          setCompanyInfo({ ...companyInfo, company_tax_no: e.target.value })
+                        }
+                        placeholder="1234567890"
+                      />
+                    </div>
                   </div>
                   <Button onClick={saveCompanyInfo} disabled={isSaving} className="gap-2">
                     <Save className="h-4 w-4" />
