@@ -433,6 +433,16 @@ export const QuoteGenerator = ({ cuttingItems, optimizedSheets, cuttingListId }:
     </div>
   ` : ''}
 
+  ${companyInfo?.bank_name || companyInfo?.bank_account_number ? `
+    <div style="margin-top: 20px; padding: 10px; background: #f5f5f5; border: 1px solid #ddd;">
+      <strong>Banking Details:</strong><br>
+      ${companyInfo?.bank_name ? `Bank: ${companyInfo.bank_name}<br>` : ''}
+      ${companyInfo?.bank_account_name ? `Account Name: ${companyInfo.bank_account_name}<br>` : ''}
+      ${companyInfo?.bank_account_number ? `Account Number: ${companyInfo.bank_account_number}<br>` : ''}
+      ${companyInfo?.bank_branch ? `Branch: ${companyInfo.bank_branch}` : ''}
+    </div>
+  ` : ''}
+
   <div class="footer">
     <div class="company-footer">${companyInfo?.company_name || 'Your Company'}</div>
     <div>${quoteDate}</div>
