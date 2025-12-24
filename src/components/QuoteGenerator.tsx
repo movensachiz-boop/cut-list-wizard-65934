@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -43,7 +43,20 @@ export const QuoteGenerator = ({ cuttingItems, optimizedSheets }: QuoteGenerator
   const [taxRate, setTaxRate] = useState(15);
   
   const { toast } = useToast();
-  const { companyInfo, materialPrices, edgingPrices, getMaterialPrice, getEdgingPrice, calculateEdgingLength, isLoading } = useCompanyPricing();
+  const {
+    companyInfo,
+    materialPrices,
+    edgingPrices,
+    getMaterialPrice,
+    getEdgingPrice,
+    calculateEdgingLength,
+    isLoading,
+    refreshPricing,
+  } = useCompanyPricing();
+
+  useEffect(() => {
+    if (isOpen) refreshPricing();
+  }, [isOpen, refreshPricing]);
 
   const calculateQuoteItems = (): QuoteLineItem[] => {
     const lineItems: QuoteLineItem[] = [];

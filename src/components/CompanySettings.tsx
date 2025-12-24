@@ -642,10 +642,18 @@ export const CompanySettings = () => {
                                 type="number"
                                 value={material.price_per_sheet}
                                 onChange={(e) => {
-                                  const updated = { ...material, price_per_sheet: parseFloat(e.target.value) || 0 };
-                                  setMaterialPrices(materialPrices.map((m) => (m.id === material.id ? updated : m)));
+                                  const updated = {
+                                    ...material,
+                                    price_per_sheet: parseFloat(e.target.value) || 0,
+                                  };
+                                  setMaterialPrices(
+                                    materialPrices.map((m) => (m.id === material.id ? updated : m))
+                                  );
                                 }}
-                                onBlur={() => updateMaterialPrice(material)}
+                                onBlur={() => {
+                                  const latest = materialPrices.find((m) => m.id === material.id);
+                                  if (latest) updateMaterialPrice(latest);
+                                }}
                                 className="w-24 text-sm"
                               />
                             </TableCell>
@@ -654,10 +662,18 @@ export const CompanySettings = () => {
                                 type="number"
                                 value={material.cost_per_sheet}
                                 onChange={(e) => {
-                                  const updated = { ...material, cost_per_sheet: parseFloat(e.target.value) || 0 };
-                                  setMaterialPrices(materialPrices.map((m) => (m.id === material.id ? updated : m)));
+                                  const updated = {
+                                    ...material,
+                                    cost_per_sheet: parseFloat(e.target.value) || 0,
+                                  };
+                                  setMaterialPrices(
+                                    materialPrices.map((m) => (m.id === material.id ? updated : m))
+                                  );
                                 }}
-                                onBlur={() => updateMaterialPrice(material)}
+                                onBlur={() => {
+                                  const latest = materialPrices.find((m) => m.id === material.id);
+                                  if (latest) updateMaterialPrice(latest);
+                                }}
                                 className="w-24 text-sm"
                               />
                             </TableCell>
@@ -777,22 +793,37 @@ export const CompanySettings = () => {
                                 type="number"
                                 value={edging.price_per_meter}
                                 onChange={(e) => {
-                                  const updated = { ...edging, price_per_meter: parseFloat(e.target.value) || 0 };
-                                  setEdgingPrices(edgingPrices.map((ed) => (ed.id === edging.id ? updated : ed)));
+                                  const updated = {
+                                    ...edging,
+                                    price_per_meter: parseFloat(e.target.value) || 0,
+                                  };
+                                  setEdgingPrices(
+                                    edgingPrices.map((ed) => (ed.id === edging.id ? updated : ed))
+                                  );
                                 }}
-                                onBlur={() => updateEdgingPrice(edging)}
+                                onBlur={() => {
+                                  const latest = edgingPrices.find((ed) => ed.id === edging.id);
+                                  if (latest) updateEdgingPrice(latest);
+                                }}
                                 className="w-24 text-sm"
                               />
-                            </TableCell>
-                            <TableCell>
+...
                               <Input
                                 type="number"
                                 value={edging.cost_per_meter}
                                 onChange={(e) => {
-                                  const updated = { ...edging, cost_per_meter: parseFloat(e.target.value) || 0 };
-                                  setEdgingPrices(edgingPrices.map((ed) => (ed.id === edging.id ? updated : ed)));
+                                  const updated = {
+                                    ...edging,
+                                    cost_per_meter: parseFloat(e.target.value) || 0,
+                                  };
+                                  setEdgingPrices(
+                                    edgingPrices.map((ed) => (ed.id === edging.id ? updated : ed))
+                                  );
                                 }}
-                                onBlur={() => updateEdgingPrice(edging)}
+                                onBlur={() => {
+                                  const latest = edgingPrices.find((ed) => ed.id === edging.id);
+                                  if (latest) updateEdgingPrice(latest);
+                                }}
                                 className="w-24 text-sm"
                               />
                             </TableCell>

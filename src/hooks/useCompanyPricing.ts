@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface MaterialPrice {
@@ -48,7 +48,7 @@ export const useCompanyPricing = () => {
     }
   };
 
-  const loadPricing = async () => {
+  const loadPricing = useCallback(async () => {
     if (!ipAddress) return;
 
     try {
@@ -90,7 +90,7 @@ export const useCompanyPricing = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [ipAddress]);
 
   const getMaterialPrice = (materialName: string): MaterialPrice | null => {
     const searchName = materialName.toLowerCase().trim();
