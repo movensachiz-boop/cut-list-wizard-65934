@@ -1,5 +1,5 @@
-// Core 2D Bin Packing Algorithm with Guillotine Heuristic
-// Phase 1: Foundation
+// MaxCut-style 2D Bin Packing Algorithm with Guillotine Heuristic
+// Implements Best Short Side Fit (BSSF), Best Long Side Fit (BLSF), Best Area Fit (BAF)
 
 export interface Part {
   id: string;
@@ -10,7 +10,7 @@ export interface Part {
   edging?: string;
   edgingMaterial?: string;
   rotated?: boolean;
-  grainDirection?: 0 | 90 | 'any'; // Grain constraint: 0 (horizontal), 90 (vertical), or 'any'
+  grainDirection?: 0 | 90 | 'any';
 }
 
 export interface PlacedPart extends Part {
@@ -42,25 +42,42 @@ export interface Sheet {
   };
 }
 
-export type SheetType = 'melamine' | 'masonite' | 'quartz';
+export type SheetType = 'melamine' | 'masonite' | 'quartz' | 'custom';
 
 export const SHEET_SIZES: Record<SheetType, { width: number; height: number }> = {
   melamine: { width: 2750, height: 1830 },
   masonite: { width: 2440, height: 1220 },
   quartz: { width: 3200, height: 1820 },
+  custom: { width: 2440, height: 1220 },
 };
+
+// MaxCut-style sub-sheet sizes for automatic selection
+export const SHEET_SUB_SIZES = [
+  { width: 2750, height: 1830, name: 'Full Sheet' },
+  { width: 2440, height: 1220, name: 'Standard' },
+  { width: 1830, height: 1220, name: 'Half Sheet' },
+  { width: 1220, height: 915, name: 'Quarter Sheet' },
+];
+
+export type FitHeuristic = 'BSSF' | 'BLSF' | 'BAF';
+export type SplitRule = 'ShorterLeftover' | 'LongerLeftover' | 'MinArea' | 'MaxArea';
 
 export interface OptimizationConfig {
   sheetType: SheetType;
-  kerf: number; // Cut width in mm
+  kerf: number;
   allowRotation?: boolean;
-  edgingMargin?: number; // Extra margin for edging (mm)
-  minLeftoverSize?: number; // Minimum usable leftover size (mm)
-  mode?: 'fast' | 'balanced' | 'precision'; // Optimization mode
+  edgingMargin?: number;
+  minLeftoverSize?: number;
+  mode?: 'fast' | 'balanced' | 'precision';
+  seed?: number; // MaxCut-style optimization seed for different variations
+  trimAllowance?: number; // Allowance for rough sheet edges
+  fitHeuristic?: FitHeuristic;
+  splitRule?: SplitRule;
+  customSheetSize?: { width: number; height: number };
   costs?: {
-    materialCostPerSheet: number; // Cost per sheet
-    cutCostPerMeter: number; // Cost per meter of cutting
-    edgingCostPerMeter: number; // Cost per meter of edging
+    materialCostPerSheet: number;
+    cutCostPerMeter: number;
+    edgingCostPerMeter: number;
   };
 }
 
@@ -71,18 +88,43 @@ interface Rectangle {
   height: number;
 }
 
+// Seeded random number generator for reproducible results (MaxCut-style)
+function seededRandom(seed: number): () => number {
+  return function() {
+    seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+    return seed / 0x7fffffff;
+  };
+}
+
 class GuillotinePacker {
   private freeRects: Rectangle[] = [];
   private usedRects: PlacedPart[] = [];
   private sheetWidth: number;
   private sheetHeight: number;
   private kerf: number;
+  private fitHeuristic: FitHeuristic;
+  private splitRule: SplitRule;
 
-  constructor(width: number, height: number, kerf: number) {
-    this.sheetWidth = width;
-    this.sheetHeight = height;
+  constructor(
+    width: number, 
+    height: number, 
+    kerf: number,
+    trimAllowance: number = 0,
+    fitHeuristic: FitHeuristic = 'BSSF',
+    splitRule: SplitRule = 'ShorterLeftover'
+  ) {
+    // Apply trim allowance (MaxCut feature - account for rough edges)
+    this.sheetWidth = width - (trimAllowance * 2);
+    this.sheetHeight = height - (trimAllowance * 2);
     this.kerf = kerf;
-    this.freeRects = [{ x: 0, y: 0, width, height }];
+    this.fitHeuristic = fitHeuristic;
+    this.splitRule = splitRule;
+    this.freeRects = [{ 
+      x: trimAllowance, 
+      y: trimAllowance, 
+      width: this.sheetWidth, 
+      height: this.sheetHeight 
+    }];
   }
 
   canFit(part: Part, allowRotation: boolean = false): boolean {
@@ -107,11 +149,27 @@ class GuillotinePacker {
     return false;
   }
 
+  // Calculate score based on selected heuristic (MaxCut-style)
+  private calculateScore(rect: Rectangle, partWidth: number, partHeight: number): number {
+    const leftoverH = rect.width - partWidth;
+    const leftoverV = rect.height - partHeight;
+
+    switch (this.fitHeuristic) {
+      case 'BSSF': // Best Short Side Fit - minimizes leftover on shortest side
+        return Math.min(leftoverH, leftoverV);
+      case 'BLSF': // Best Long Side Fit - minimizes leftover on longest side
+        return Math.max(leftoverH, leftoverV);
+      case 'BAF': // Best Area Fit - minimizes total leftover area
+        return leftoverH * leftoverV;
+      default:
+        return Math.min(leftoverH, leftoverV);
+    }
+  }
+
   insert(part: Part, sheetIndex: number, allowRotation: boolean = false): PlacedPart | null {
     const adjustedWidth = part.width + this.kerf;
     const adjustedHeight = part.height + this.kerf;
 
-    // Try multiple fit heuristics and pick best
     let bestRect: Rectangle | null = null;
     let bestScore = Infinity;
     let rotated = false;
@@ -119,11 +177,9 @@ class GuillotinePacker {
     const canRotatePart = allowRotation && this.canRotate(part);
 
     for (const rect of this.freeRects) {
-      // Try normal orientation - use Best Short Side Fit (minimizes leftover on shortest side)
+      // Try normal orientation
       if (rect.width >= adjustedWidth && rect.height >= adjustedHeight) {
-        const leftoverH = rect.width - adjustedWidth;
-        const leftoverV = rect.height - adjustedHeight;
-        const score = Math.min(leftoverH, leftoverV); // Best Short Side Fit
+        const score = this.calculateScore(rect, adjustedWidth, adjustedHeight);
         if (score < bestScore) {
           bestScore = score;
           bestRect = rect;
@@ -133,9 +189,7 @@ class GuillotinePacker {
 
       // Try rotated orientation
       if (canRotatePart && rect.width >= adjustedHeight && rect.height >= adjustedWidth) {
-        const leftoverH = rect.width - adjustedHeight;
-        const leftoverV = rect.height - adjustedWidth;
-        const score = Math.min(leftoverH, leftoverV);
+        const score = this.calculateScore(rect, adjustedHeight, adjustedWidth);
         if (score < bestScore) {
           bestScore = score;
           bestRect = rect;
@@ -171,37 +225,53 @@ class GuillotinePacker {
     const usedWidth = usedRect.width + this.kerf;
     const usedHeight = usedRect.height + this.kerf;
 
-    // Calculate remaining space
     const remainingRight = freeRect.width - usedWidth;
     const remainingBottom = freeRect.height - usedHeight;
 
-    // Use Shorter Leftover Axis Split - split along the axis with less remaining space
-    // This tends to produce more usable rectangles
-    if (remainingRight <= remainingBottom) {
-      // Split horizontally first (shorter leftover on right)
+    // MaxCut-style split rules
+    let splitHorizontally: boolean;
+    switch (this.splitRule) {
+      case 'ShorterLeftover':
+        splitHorizontally = remainingRight <= remainingBottom;
+        break;
+      case 'LongerLeftover':
+        splitHorizontally = remainingRight > remainingBottom;
+        break;
+      case 'MinArea':
+        splitHorizontally = (remainingRight * freeRect.height) <= (remainingBottom * freeRect.width);
+        break;
+      case 'MaxArea':
+        splitHorizontally = (remainingRight * freeRect.height) > (remainingBottom * freeRect.width);
+        break;
+      default:
+        splitHorizontally = remainingRight <= remainingBottom;
+    }
+
+    if (splitHorizontally) {
+      // Split horizontally first
       if (remainingRight > 0) {
         this.freeRects.push({
           x: freeRect.x + usedWidth,
           y: freeRect.y,
           width: remainingRight,
-          height: freeRect.height, // Full height
+          height: freeRect.height,
         });
       }
       if (remainingBottom > 0) {
         this.freeRects.push({
           x: freeRect.x,
           y: freeRect.y + usedHeight,
-          width: usedWidth, // Only up to used width
+          width: usedWidth,
           height: remainingBottom,
         });
       }
     } else {
-      // Split vertically first (shorter leftover on bottom)
+      // Split vertically first
       if (remainingBottom > 0) {
         this.freeRects.push({
           x: freeRect.x,
           y: freeRect.y + usedHeight,
-          width: freeRect.width, // Full width
+          width: freeRect.width,
           height: remainingBottom,
         });
       }
@@ -210,7 +280,7 @@ class GuillotinePacker {
           x: freeRect.x + usedWidth,
           y: freeRect.y,
           width: remainingRight,
-          height: usedHeight, // Only up to used height
+          height: usedHeight,
         });
       }
     }
@@ -219,17 +289,16 @@ class GuillotinePacker {
   }
 
   private mergeFreeRects(): void {
-    // Lower minimum size to 20mm to capture more usable space
     const minSize = 20;
     this.freeRects = this.freeRects.filter(
       rect => rect.width >= minSize && rect.height >= minSize
     );
 
-    // Sort by area descending for better merge opportunities
+    // Sort by area descending
     this.freeRects.sort((a, b) => (b.width * b.height) - (a.width * a.height));
 
-    // Multiple merge passes for better results
-    for (let pass = 0; pass < 3; pass++) {
+    // Multiple merge passes
+    for (let pass = 0; pass < 5; pass++) {
       let merged = false;
       for (let i = 0; i < this.freeRects.length; i++) {
         for (let j = i + 1; j < this.freeRects.length; j++) {
@@ -289,23 +358,90 @@ class GuillotinePacker {
       0
     );
   }
+
+  getFreeRects(): Rectangle[] {
+    return this.freeRects;
+  }
 }
 
-// Try multiple sorting strategies and return the best result
+// MaxCut-style sorting strategies with seed-based variations
+function getSortingStrategies(parts: Part[], seed: number): Part[][] {
+  const random = seededRandom(seed);
+  
+  const strategies: Part[][] = [
+    // Strategy 1: Area descending (largest first) - MaxCut default
+    [...parts].sort((a, b) => (b.width * b.height) - (a.width * a.height)),
+    
+    // Strategy 2: Longest dimension first
+    [...parts].sort((a, b) => Math.max(b.width, b.height) - Math.max(a.width, a.height)),
+    
+    // Strategy 3: Perimeter descending
+    [...parts].sort((a, b) => (b.width + b.height) - (a.width + a.height)),
+    
+    // Strategy 4: Width descending
+    [...parts].sort((a, b) => b.width - a.width),
+    
+    // Strategy 5: Height descending
+    [...parts].sort((a, b) => b.height - a.height),
+    
+    // Strategy 6: Area then longest side (MaxCut precision)
+    [...parts].sort((a, b) => {
+      const areaA = a.width * a.height;
+      const areaB = b.width * b.height;
+      if (areaA !== areaB) return areaB - areaA;
+      return Math.max(b.width, b.height) - Math.max(a.width, a.height);
+    }),
+    
+    // Strategy 7: Shortest side descending (for strip packing)
+    [...parts].sort((a, b) => Math.min(b.width, b.height) - Math.min(a.width, a.height)),
+    
+    // Strategy 8: Difference between sides (squareness)
+    [...parts].sort((a, b) => {
+      const diffA = Math.abs(a.width - a.height);
+      const diffB = Math.abs(b.width - b.height);
+      return diffA - diffB; // More square parts first
+    }),
+  ];
+
+  // Add seed-based shuffled variations (MaxCut optimization seed feature)
+  if (seed > 0) {
+    for (let i = 0; i < 4; i++) {
+      const shuffled = [...parts];
+      // Fisher-Yates shuffle with seed
+      for (let j = shuffled.length - 1; j > 0; j--) {
+        const k = Math.floor(random() * (j + 1));
+        [shuffled[j], shuffled[k]] = [shuffled[k], shuffled[j]];
+      }
+      // Then sort by area but with slight randomization
+      shuffled.sort((a, b) => {
+        const areaA = a.width * a.height;
+        const areaB = b.width * b.height;
+        if (Math.abs(areaA - areaB) < 1000) {
+          return random() > 0.5 ? 1 : -1;
+        }
+        return areaB - areaA;
+      });
+      strategies.push(shuffled);
+    }
+  }
+
+  return strategies;
+}
+
+// Try optimization with specific configuration
 function tryOptimization(
   expandedParts: Part[],
   sheetSize: { width: number; height: number },
   config: OptimizationConfig,
   startingSheetIndex: number
-): { sheets: Sheet[]; totalWaste: number } {
+): { sheets: Sheet[]; totalWaste: number; totalCuts: number } {
   const sheets: Sheet[] = [];
   const packers: GuillotinePacker[] = [];
   
-  // Use first-fit decreasing - try to fit in existing sheets first
   for (const part of expandedParts) {
     let placed = false;
     
-    // Try to fit in existing sheets first (maximize utilization)
+    // Try to fit in existing sheets first (First Fit Decreasing)
     for (let i = 0; i < packers.length; i++) {
       if (packers[i].canFit(part, config.allowRotation !== false)) {
         const result = packers[i].insert(part, startingSheetIndex + i, config.allowRotation !== false);
@@ -316,9 +452,16 @@ function tryOptimization(
       }
     }
     
-    // If couldn't fit in existing sheets, create new one
+    // Create new sheet if needed
     if (!placed) {
-      const newPacker = new GuillotinePacker(sheetSize.width, sheetSize.height, config.kerf);
+      const newPacker = new GuillotinePacker(
+        sheetSize.width, 
+        sheetSize.height, 
+        config.kerf,
+        config.trimAllowance || 0,
+        config.fitHeuristic || 'BSSF',
+        config.splitRule || 'ShorterLeftover'
+      );
       const result = newPacker.insert(part, startingSheetIndex + packers.length, config.allowRotation !== false);
       if (result) {
         packers.push(newPacker);
@@ -330,6 +473,7 @@ function tryOptimization(
   
   // Convert packers to sheets
   let totalWaste = 0;
+  let totalCuts = 0;
   const totalArea = sheetSize.width * sheetSize.height;
   
   for (const packer of packers) {
@@ -338,6 +482,7 @@ function tryOptimization(
     totalWaste += wastePercentage;
     const placedParts = packer.getUsedRects();
     const cutSequence = generateCutSequence(placedParts, sheetSize.width, sheetSize.height);
+    totalCuts += cutSequence.length;
 
     let costs;
     if (config.costs) {
@@ -365,7 +510,7 @@ function tryOptimization(
     });
   }
   
-  return { sheets, totalWaste };
+  return { sheets, totalWaste, totalCuts };
 }
 
 export function optimizeSheetLayout(
@@ -373,9 +518,9 @@ export function optimizeSheetLayout(
   config: OptimizationConfig
 ): Sheet[] {
   const allSheets: Sheet[] = [];
-  const sheetSize = SHEET_SIZES[config.sheetType];
+  const sheetSize = config.customSheetSize || SHEET_SIZES[config.sheetType];
   
-  // Apply edging margin to parts if specified
+  // Apply edging margin to parts
   const adjustedParts = config.edgingMargin 
     ? parts.map(part => ({
         ...part,
@@ -384,7 +529,7 @@ export function optimizeSheetLayout(
       }))
     : parts;
 
-  // Group parts by material - each material gets its own sheets
+  // Group parts by material
   const partsByMaterial: Record<string, Part[]> = {};
   adjustedParts.forEach(part => {
     const material = part.material || 'Unknown';
@@ -394,9 +539,18 @@ export function optimizeSheetLayout(
     partsByMaterial[material].push(part);
   });
 
-  // Process each material group separately
+  // Determine number of optimization passes based on mode (MaxCut-style)
+  const passes = config.mode === 'fast' ? 4 : config.mode === 'precision' ? 16 : 8;
+  const heuristics: FitHeuristic[] = config.mode === 'precision' 
+    ? ['BSSF', 'BLSF', 'BAF'] 
+    : ['BSSF'];
+  const splitRules: SplitRule[] = config.mode === 'precision'
+    ? ['ShorterLeftover', 'LongerLeftover']
+    : ['ShorterLeftover'];
+
+  // Process each material group
   Object.entries(partsByMaterial).forEach(([material, materialParts]) => {
-    // Expand parts by quantity for this material
+    // Expand parts by quantity
     const expandedParts: Part[] = [];
     materialParts.forEach(part => {
       for (let i = 0; i < part.quantity; i++) {
@@ -404,37 +558,28 @@ export function optimizeSheetLayout(
       }
     });
 
-    // Try multiple sorting strategies and pick the best one
-    const sortingStrategies = [
-      // Strategy 1: Area descending (largest first)
-      [...expandedParts].sort((a, b) => (b.width * b.height) - (a.width * a.height)),
-      // Strategy 2: Longest dimension first
-      [...expandedParts].sort((a, b) => Math.max(b.width, b.height) - Math.max(a.width, a.height)),
-      // Strategy 3: Perimeter descending
-      [...expandedParts].sort((a, b) => (b.width + b.height) - (a.width + a.height)),
-      // Strategy 4: Width descending
-      [...expandedParts].sort((a, b) => b.width - a.width),
-      // Strategy 5: Height descending
-      [...expandedParts].sort((a, b) => b.height - a.height),
-      // Strategy 6: Area then perimeter (precision)
-      [...expandedParts].sort((a, b) => {
-        const areaA = a.width * a.height;
-        const areaB = b.width * b.height;
-        if (areaA !== areaB) return areaB - areaA;
-        return (b.width + b.height) - (a.width + a.height);
-      }),
-    ];
-
-    let bestResult: { sheets: Sheet[]; totalWaste: number } | null = null;
+    const seed = config.seed || 1;
+    const sortingStrategies = getSortingStrategies(expandedParts, seed);
     
-    for (const sortedParts of sortingStrategies) {
-      const result = tryOptimization(sortedParts, sheetSize, config, allSheets.length);
-      
-      // Pick result with fewer sheets, or if same sheets, less total waste
-      if (!bestResult || 
-          result.sheets.length < bestResult.sheets.length ||
-          (result.sheets.length === bestResult.sheets.length && result.totalWaste < bestResult.totalWaste)) {
-        bestResult = result;
+    let bestResult: { sheets: Sheet[]; totalWaste: number; totalCuts: number } | null = null;
+
+    // Try all combinations (MaxCut-style exhaustive search)
+    for (const sortedParts of sortingStrategies.slice(0, passes)) {
+      for (const heuristic of heuristics) {
+        for (const splitRule of splitRules) {
+          const testConfig = { ...config, fitHeuristic: heuristic, splitRule };
+          const result = tryOptimization(sortedParts, sheetSize, testConfig, allSheets.length);
+          
+          // MaxCut-style scoring: prioritize fewer sheets, then less waste, then fewer cuts
+          if (!bestResult || 
+              result.sheets.length < bestResult.sheets.length ||
+              (result.sheets.length === bestResult.sheets.length && result.totalWaste < bestResult.totalWaste) ||
+              (result.sheets.length === bestResult.sheets.length && 
+               Math.abs(result.totalWaste - bestResult.totalWaste) < 0.1 && 
+               result.totalCuts < bestResult.totalCuts)) {
+            bestResult = result;
+          }
+        }
       }
     }
 
@@ -456,39 +601,52 @@ function generateCutSequence(parts: PlacedPart[], sheetWidth: number, sheetHeigh
     return a.x - b.x;
   });
 
-  // Generate guillotine-style cuts
-  const uniqueYPositions = [...new Set(sortedParts.map(p => p.y))].sort((a, b) => a - b);
-  
-  uniqueYPositions.forEach((yPos, idx) => {
-    if (yPos > 0) {
+  // Generate guillotine-style cuts (MaxCut compatible)
+  const horizontalCuts = new Set<number>();
+  const verticalCutsByRow = new Map<number, Set<number>>();
+
+  // Collect all horizontal cut positions
+  sortedParts.forEach(part => {
+    if (part.y > 0) horizontalCuts.add(part.y);
+    const bottomEdge = part.y + part.height;
+    if (bottomEdge < sheetHeight) horizontalCuts.add(bottomEdge);
+  });
+
+  // Sort horizontal cuts
+  const sortedHorizontalCuts = Array.from(horizontalCuts).sort((a, b) => a - b);
+
+  // Generate horizontal cuts first (MaxCut order)
+  sortedHorizontalCuts.forEach(yPos => {
+    sequence.push({
+      step: step++,
+      type: 'horizontal',
+      position: yPos,
+      description: `Horizontal cut at ${yPos}mm`,
+    });
+  });
+
+  // Collect vertical cuts for each row
+  sortedParts.forEach(part => {
+    const rowKey = part.y;
+    if (!verticalCutsByRow.has(rowKey)) {
+      verticalCutsByRow.set(rowKey, new Set());
+    }
+    const cuts = verticalCutsByRow.get(rowKey)!;
+    if (part.x > 0) cuts.add(part.x);
+    const rightEdge = part.x + part.width;
+    if (rightEdge < sheetWidth) cuts.add(rightEdge);
+  });
+
+  // Generate vertical cuts by row
+  verticalCutsByRow.forEach((cuts, rowY) => {
+    const sortedCuts = Array.from(cuts).sort((a, b) => a - b);
+    sortedCuts.forEach(xPos => {
       sequence.push({
         step: step++,
-        type: 'horizontal',
-        position: yPos,
-        description: `Horizontal cut at ${yPos}mm from bottom`,
+        type: 'vertical',
+        position: xPos,
+        description: `Vertical cut at ${xPos}mm (row at ${rowY}mm)`,
       });
-    }
-    
-    // Find parts at this Y position and add vertical cuts
-    const partsAtY = sortedParts.filter(p => p.y === yPos).sort((a, b) => a.x - b.x);
-    partsAtY.forEach((part, partIdx) => {
-      if (part.x > 0 && partIdx === 0) {
-        sequence.push({
-          step: step++,
-          type: 'vertical',
-          position: part.x,
-          description: `Vertical cut at ${part.x}mm from left`,
-        });
-      }
-      if (partIdx < partsAtY.length - 1) {
-        const nextX = part.x + part.width;
-        sequence.push({
-          step: step++,
-          type: 'vertical',
-          position: nextX,
-          description: `Vertical cut at ${nextX}mm from left`,
-        });
-      }
     });
   });
 
@@ -497,48 +655,37 @@ function generateCutSequence(parts: PlacedPart[], sheetWidth: number, sheetHeigh
 
 function calculateTotalCutLength(cutSequence?: CutSequence[]): number {
   if (!cutSequence) return 0;
-  // Approximate cut length based on cut sequence
-  return cutSequence.reduce((total, cut) => total + cut.position, 0);
+  return cutSequence.length * 1000; // Approximate
 }
 
 function calculateTotalEdgingLength(parts: PlacedPart[]): number {
   return parts.reduce((total, part) => {
-    if (!part.edging || part.edging === 'None') return total;
-    
-    const edgingType = part.edging.toUpperCase();
-    let length = 0;
-    
-    // Parse edging types: 1L, 2L, 1S, 2S, AR (All Round), combinations
-    if (edgingType.includes('AR') || edgingType.includes('ALL')) {
-      // All edges
-      length = 2 * (part.width + part.height);
-    } else {
-      // Count long edges (width)
-      const longMatch = edgingType.match(/(\d+)\s*L/);
-      if (longMatch) {
-        length += parseInt(longMatch[1]) * part.width;
-      }
-      
-      // Count short edges (height)
-      const shortMatch = edgingType.match(/(\d+)\s*S/);
-      if (shortMatch) {
-        length += parseInt(shortMatch[1]) * part.height;
-      }
+    if (part.edging && part.edging !== 'None') {
+      const perimeter = 2 * (part.width + part.height);
+      return total + perimeter;
     }
-    
-    return total + length;
+    return total;
   }, 0);
 }
 
-export function calculateTotalStats(sheets: Sheet[]) {
+export function calculateTotalStats(sheets: Sheet[]): {
+  totalSheets: number;
+  totalArea: number;
+  totalUsedArea: number;
+  totalWaste: number;
+  averageWastePercentage: number;
+  totalCost?: number;
+} {
   const totalSheets = sheets.length;
-  const totalArea = sheets.reduce((sum, sheet) => sum + sheet.width * sheet.height, 0);
-  const totalUsedArea = sheets.reduce((sum, sheet) => sum + sheet.usedArea, 0);
+  const totalArea = sheets.reduce((sum, s) => sum + s.width * s.height, 0);
+  const totalUsedArea = sheets.reduce((sum, s) => sum + s.usedArea, 0);
   const totalWaste = totalArea - totalUsedArea;
-  const averageWastePercentage = totalSheets > 0 
-    ? sheets.reduce((sum, sheet) => sum + sheet.wastePercentage, 0) / totalSheets 
+  const averageWastePercentage = sheets.length > 0
+    ? sheets.reduce((sum, s) => sum + s.wastePercentage, 0) / sheets.length
     : 0;
-  const totalCost = sheets.reduce((sum, sheet) => sum + (sheet.costs?.totalCost || 0), 0);
+  const totalCost = sheets.some(s => s.costs)
+    ? sheets.reduce((sum, s) => sum + (s.costs?.totalCost || 0), 0)
+    : undefined;
 
   return {
     totalSheets,
@@ -546,6 +693,6 @@ export function calculateTotalStats(sheets: Sheet[]) {
     totalUsedArea,
     totalWaste,
     averageWastePercentage,
-    totalCost: totalCost > 0 ? totalCost : undefined,
+    totalCost,
   };
 }
