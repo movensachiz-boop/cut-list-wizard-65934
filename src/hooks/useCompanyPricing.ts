@@ -128,6 +128,15 @@ export const useCompanyPricing = () => {
       );
     }
     
+    // Try word-by-word match (e.g., "Beige Melamine" should match "Beige")
+    if (!match) {
+      const searchWords = searchName.split(/\s+/);
+      match = materialPrices.find((m) => {
+        const priceName = m.material_name.toLowerCase().trim();
+        return searchWords.some(word => word === priceName || priceName.includes(word));
+      });
+    }
+    
     return match || null;
   };
 
