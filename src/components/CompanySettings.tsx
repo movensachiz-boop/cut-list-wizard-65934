@@ -51,6 +51,7 @@ interface CompanyInfo {
   bank_account_name: string;
   bank_account_number: string;
   bank_branch: string;
+  quote_validity_days: number;
 }
 
 export const CompanySettings = () => {
@@ -72,6 +73,7 @@ export const CompanySettings = () => {
     bank_account_name: "",
     bank_account_number: "",
     bank_branch: "",
+    quote_validity_days: 30,
   });
 
   // Material prices
@@ -140,6 +142,7 @@ export const CompanySettings = () => {
           bank_account_name: companyData.bank_account_name || "",
           bank_account_number: companyData.bank_account_number || "",
           bank_branch: companyData.bank_branch || "",
+          quote_validity_days: companyData.quote_validity_days ?? 30,
         });
       }
 
@@ -189,6 +192,7 @@ export const CompanySettings = () => {
           bank_account_name: companyInfo.bank_account_name,
           bank_account_number: companyInfo.bank_account_number,
           bank_branch: companyInfo.bank_branch,
+          quote_validity_days: companyInfo.quote_validity_days,
         }, { onConflict: "ip_address" });
 
       if (error) throw error;
@@ -652,6 +656,23 @@ export const CompanySettings = () => {
                           placeholder="Main Branch"
                         />
                       </div>
+                    </div>
+                  </div>
+                  
+                  <div className="pt-4 border-t">
+                    <h4 className="font-medium mb-3">Quote Settings</h4>
+                    <div className="space-y-2">
+                      <Label>Quote Validity (Days)</Label>
+                      <Input
+                        type="number"
+                        min="1"
+                        value={companyInfo.quote_validity_days}
+                        onChange={(e) =>
+                          setCompanyInfo({ ...companyInfo, quote_validity_days: parseInt(e.target.value) || 30 })
+                        }
+                        placeholder="30"
+                      />
+                      <p className="text-xs text-muted-foreground">Number of days the quote remains valid</p>
                     </div>
                   </div>
                   

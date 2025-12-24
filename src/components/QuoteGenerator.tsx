@@ -455,6 +455,10 @@ export const QuoteGenerator = ({ cuttingItems, optimizedSheets, cuttingListId }:
     </div>
   ` : ''}
 
+  <div style="margin-top: 15px; text-align: center; font-style: italic; color: #666;">
+    Quote valid for ${companyInfo?.quote_validity_days || 30} days from date of issue.
+  </div>
+
   <div class="footer">
     <div class="company-footer">${companyInfo?.company_name || 'Your Company'}</div>
     <div>${quoteDate}</div>

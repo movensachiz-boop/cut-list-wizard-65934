@@ -281,6 +281,7 @@ export type Database = {
           created_at: string
           id: string
           ip_address: string
+          quote_validity_days: number | null
           updated_at: string
         }
         Insert: {
@@ -298,6 +299,7 @@ export type Database = {
           created_at?: string
           id?: string
           ip_address: string
+          quote_validity_days?: number | null
           updated_at?: string
         }
         Update: {
@@ -315,6 +317,7 @@ export type Database = {
           created_at?: string
           id?: string
           ip_address?: string
+          quote_validity_days?: number | null
           updated_at?: string
         }
         Relationships: []
