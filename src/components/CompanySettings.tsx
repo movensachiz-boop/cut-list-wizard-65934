@@ -94,6 +94,21 @@ export const CompanySettings = () => {
     cost_per_meter: 0,
   });
 
+  // Bulk entry state
+  const [bulkPrice, setBulkPrice] = useState({ price_per_sheet: 0, cost_per_sheet: 0 });
+  
+  // Common board colors for bulk entry (excluding white, glass, postform, masonite, granite)
+  const bulkColorList = [
+    "Beech", "Oak", "Cherry", "Walnut", "Mahogany", "Sapele", "Wenge", "Teak",
+    "Ash", "Maple", "Birch", "Pine", "Cedar", "Black", "Grey", "Charcoal",
+    "Cream", "Ivory", "Beige", "Sand", "Cappuccino", "Mocca", "Tobacco",
+    "Red", "Blue", "Green", "Yellow", "Orange", "Purple", "Burgundy",
+    "Anthracite", "Graphite", "Silver", "Aluminium", "Bronze"
+  ];
+  
+  // Excluded keywords (case-insensitive matching)
+  const excludedKeywords = ["white", "glass", "postform", "masonite", "granite"];
+
   useEffect(() => {
     if (isOpen) {
       fetchIpAddress();
@@ -279,6 +294,43 @@ export const CompanySettings = () => {
       console.error("Error deleting material:", err);
       toast.error("Failed to delete material");
     }
+  };
+
+  const applyBulkPricing = async () => {
+    if (!ipAddress) return;
+    if (bulkPrice.price_per_sheet <= 0) {
+      toast.error("Please enter a valid price");
+      return;
+    }
+
+    try {
+      const materialsToAdd = bulkColorList.map(color => ({
+        ip_address: ipAddress,
+        material_name: color,
+        price_per_sheet: bulkPrice.price_per_sheet,
+        cost_per_sheet: bulkPrice.cost_per_sheet,
+        sheet_length: 2750,
+        sheet_width: 1830,
+      }));
+
+      const { data, error } = await supabase
+        .from("ip_material_prices")
+        .upsert(materialsToAdd, { onConflict: "ip_address,material_name" })
+        .select();
+
+      if (error) throw error;
+
+      await loadSettings();
+      toast.success(`Applied bulk pricing to ${bulkColorList.length} colors`);
+    } catch (err) {
+      console.error("Error applying bulk pricing:", err);
+      toast.error("Failed to apply bulk pricing");
+    }
+  };
+
+  const isExcludedMaterial = (name: string): boolean => {
+    const lowerName = name.toLowerCase();
+    return excludedKeywords.some(keyword => lowerName.includes(keyword));
   };
 
   const addEdgingPrice = async () => {
@@ -710,9 +762,50 @@ export const CompanySettings = () => {
                       </label>
                     </div>
                   </CardTitle>
-                  <CardDescription>Set prices per sheet for each material, or import from CSV</CardDescription>
+                  <CardDescription>Set prices per sheet for each material, or use bulk entry for all colors</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {/* Bulk Entry Section */}
+                  <div className="bg-muted/50 rounded-lg p-4 border">
+                    <h4 className="font-medium mb-2 text-sm">Bulk Entry - All Colors (except White, Glass, Postform, Masonite, Granite)</h4>
+                    <p className="text-xs text-muted-foreground mb-3">
+                      Set one price for all standard board colors. You can correct individual prices below after.
+                    </p>
+                    <div className="flex gap-3 items-end flex-wrap">
+                      <div>
+                        <Label className="text-xs">Price/Sheet</Label>
+                        <Input
+                          type="number"
+                          value={bulkPrice.price_per_sheet || ""}
+                          onChange={(e) =>
+                            setBulkPrice({ ...bulkPrice, price_per_sheet: parseFloat(e.target.value) || 0 })
+                          }
+                          placeholder="0"
+                          className="w-28 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs">Cost/Sheet</Label>
+                        <Input
+                          type="number"
+                          value={bulkPrice.cost_per_sheet || ""}
+                          onChange={(e) =>
+                            setBulkPrice({ ...bulkPrice, cost_per_sheet: parseFloat(e.target.value) || 0 })
+                          }
+                          placeholder="0"
+                          className="w-28 text-sm"
+                        />
+                      </div>
+                      <Button onClick={applyBulkPricing} size="sm" className="gap-1">
+                        <Plus className="h-4 w-4" />
+                        Apply to All Colors
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Colors: {bulkColorList.slice(0, 8).join(", ")}... and {bulkColorList.length - 8} more
+                    </p>
+                  </div>
+
                   {/* Add new material */}
                   <div className="grid grid-cols-6 gap-2 items-end border-b pb-4">
                     <div className="col-span-2">
