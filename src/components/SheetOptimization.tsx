@@ -5,14 +5,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Sheet, SheetType, optimizeSheetLayout, calculateTotalStats, Part, SHEET_SIZES } from "@/lib/sheetOptimizer";
+import { Sheet, SheetType, optimizeSheetLayout, calculateTotalStats, Part, SHEET_SIZES, FitHeuristic, SplitRule } from "@/lib/sheetOptimizer";
 import { SheetLayoutViewer } from "./SheetLayoutViewer";
 import { exportCuttingListToCSV, exportToExcel, exportSheetLayoutToPDF } from "@/lib/exportUtils";
 import { exportToCNC, exportToDXF } from "@/lib/cncExport";
 import { saveOptimizationRun } from "@/lib/optimizationHistory";
 import { OptimizationHistory } from "./OptimizationHistory";
 import { QuoteGenerator } from "./QuoteGenerator";
-import { Loader2, Maximize2, Package, FileText, FileSpreadsheet, Printer, Cog, DollarSign, Zap, Scale, Target } from "lucide-react";
+import { Loader2, Maximize2, Package, FileText, FileSpreadsheet, Printer, Cog, DollarSign, Zap, Scale, Target, Shuffle, Scissors } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
@@ -38,6 +38,12 @@ export const SheetOptimization = ({ cuttingItems }: SheetOptimizationProps) => {
   const [optimizationMode, setOptimizationMode] = useState<'fast' | 'balanced' | 'precision'>('balanced');
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [optimizedSheets, setOptimizedSheets] = useState<Sheet[]>([]);
+  
+  // MaxCut-style features
+  const [optimizationSeed, setOptimizationSeed] = useState(1);
+  const [trimAllowance, setTrimAllowance] = useState(0);
+  const [fitHeuristic, setFitHeuristic] = useState<FitHeuristic>('BSSF');
+  const [splitRule, setSplitRule] = useState<SplitRule>('ShorterLeftover');
   
   // Cost estimation
   const [enableCostEstimation, setEnableCostEstimation] = useState(false);
@@ -79,6 +85,10 @@ export const SheetOptimization = ({ cuttingItems }: SheetOptimizationProps) => {
           edgingMargin,
           minLeftoverSize,
           mode: optimizationMode,
+          seed: optimizationSeed,
+          trimAllowance,
+          fitHeuristic,
+          splitRule,
           costs: enableCostEstimation ? {
             materialCostPerSheet,
             cutCostPerMeter,
@@ -100,6 +110,10 @@ export const SheetOptimization = ({ cuttingItems }: SheetOptimizationProps) => {
             edgingMargin,
             minLeftoverSize,
             mode: optimizationMode,
+            seed: optimizationSeed,
+            trimAllowance,
+            fitHeuristic,
+            splitRule,
             costs: enableCostEstimation ? {
               materialCostPerSheet,
               cutCostPerMeter,
@@ -291,6 +305,107 @@ export const SheetOptimization = ({ cuttingItems }: SheetOptimizationProps) => {
               </p>
             </div>
           </div>
+
+          {/* MaxCut-Style Advanced Settings */}
+          <Collapsible className="space-y-4">
+            <CollapsibleTrigger asChild>
+              <Button variant="outline" className="w-full justify-between">
+                <div className="flex items-center gap-2">
+                  <Scissors className="h-4 w-4" />
+                  <span>MaxCut Advanced Settings</span>
+                </div>
+              </Button>
+            </CollapsibleTrigger>
+            
+            <CollapsibleContent>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 bg-muted/30 rounded-lg">
+                {/* Optimization Seed */}
+                <div className="space-y-2">
+                  <Label htmlFor="opt-seed">Optimization Seed</Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id="opt-seed"
+                      type="number"
+                      value={optimizationSeed}
+                      onChange={(e) => setOptimizationSeed(Number(e.target.value))}
+                      min={1}
+                      max={999}
+                      className="w-full"
+                    />
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      onClick={() => setOptimizationSeed(Math.floor(Math.random() * 999) + 1)}
+                      title="Random seed"
+                    >
+                      <Shuffle className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Different seeds = different layouts
+                  </p>
+                </div>
+
+                {/* Trim Allowance */}
+                <div className="space-y-2">
+                  <Label htmlFor="trim-allowance">Trim Allowance</Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id="trim-allowance"
+                      type="number"
+                      value={trimAllowance}
+                      onChange={(e) => setTrimAllowance(Number(e.target.value))}
+                      min={0}
+                      max={50}
+                      step={1}
+                      className="w-full"
+                    />
+                    <span className="text-sm text-muted-foreground whitespace-nowrap">mm</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    For rough sheet edges
+                  </p>
+                </div>
+
+                {/* Fit Heuristic */}
+                <div className="space-y-2">
+                  <Label htmlFor="fit-heuristic">Fit Heuristic</Label>
+                  <Select value={fitHeuristic} onValueChange={(value) => setFitHeuristic(value as FitHeuristic)}>
+                    <SelectTrigger id="fit-heuristic">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="BSSF">Best Short Side Fit</SelectItem>
+                      <SelectItem value="BLSF">Best Long Side Fit</SelectItem>
+                      <SelectItem value="BAF">Best Area Fit</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Part placement strategy
+                  </p>
+                </div>
+
+                {/* Split Rule */}
+                <div className="space-y-2">
+                  <Label htmlFor="split-rule">Split Rule</Label>
+                  <Select value={splitRule} onValueChange={(value) => setSplitRule(value as SplitRule)}>
+                    <SelectTrigger id="split-rule">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ShorterLeftover">Shorter Leftover</SelectItem>
+                      <SelectItem value="LongerLeftover">Longer Leftover</SelectItem>
+                      <SelectItem value="MinArea">Min Area Split</SelectItem>
+                      <SelectItem value="MaxArea">Max Area Split</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    How to split free space
+                  </p>
+                </div>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
 
           {/* Cost Estimation (Collapsible) */}
           <Collapsible className="space-y-4">
