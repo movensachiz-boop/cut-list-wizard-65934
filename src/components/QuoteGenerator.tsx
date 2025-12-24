@@ -338,12 +338,12 @@ export const QuoteGenerator = ({ cuttingItems, optimizedSheets, cuttingListId }:
     <div class="quote-title">Quote - ${customerName || 'Customer'}</div>
     <div class="company-name">${companyInfo?.company_name || 'Your Company'}</div>
     <div class="company-details">
-      <span>Tel : +263780555268 /+263718456811</span>
-      <span>Fax : www.abvzimbabwe.com</span>
+      <span>Tel : ${companyInfo?.company_tel || ''}</span>
+      <span>Fax : ${companyInfo?.company_fax || ''}</span>
     </div>
     <div class="company-details">
-      <span>Email : artipelbusinessventures.com</span>
-      <span>Client Tax No. : 4536A0352024</span>
+      <span>Email : ${companyInfo?.company_email || ''}</span>
+      <span>Tax No. : ${companyInfo?.company_tax_no || ''}</span>
     </div>
   </div>
 

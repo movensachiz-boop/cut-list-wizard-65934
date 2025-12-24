@@ -267,24 +267,36 @@ export type Database = {
       }
       ip_company_settings: {
         Row: {
+          company_email: string | null
+          company_fax: string | null
           company_logo_url: string | null
           company_name: string | null
+          company_tax_no: string | null
+          company_tel: string | null
           created_at: string
           id: string
           ip_address: string
           updated_at: string
         }
         Insert: {
+          company_email?: string | null
+          company_fax?: string | null
           company_logo_url?: string | null
           company_name?: string | null
+          company_tax_no?: string | null
+          company_tel?: string | null
           created_at?: string
           id?: string
           ip_address: string
           updated_at?: string
         }
         Update: {
+          company_email?: string | null
+          company_fax?: string | null
           company_logo_url?: string | null
           company_name?: string | null
+          company_tax_no?: string | null
+          company_tel?: string | null
           created_at?: string
           id?: string
           ip_address?: string

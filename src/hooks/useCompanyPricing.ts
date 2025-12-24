@@ -18,6 +18,10 @@ interface EdgingPrice {
 interface CompanyInfo {
   company_name: string;
   company_logo_url: string;
+  company_tel: string;
+  company_fax: string;
+  company_email: string;
+  company_tax_no: string;
 }
 
 export const useCompanyPricing = () => {
@@ -63,6 +67,10 @@ export const useCompanyPricing = () => {
         setCompanyInfo({
           company_name: companyData.company_name || "",
           company_logo_url: companyData.company_logo_url || "",
+          company_tel: companyData.company_tel || "",
+          company_fax: companyData.company_fax || "",
+          company_email: companyData.company_email || "",
+          company_tax_no: companyData.company_tax_no || "",
         });
       }
 
