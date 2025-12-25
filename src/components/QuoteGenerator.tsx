@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -487,6 +488,15 @@ export const QuoteGenerator = ({ cuttingItems, optimizedSheets, cuttingListId }:
   const lineItems = optimizedSheets.length > 0 ? calculateQuoteItems() : [];
   const subtotal = lineItems.reduce((sum, item) => sum + item.linePrice, 0);
 
+  const unpricedItems = lineItems
+    .filter(
+      (item) =>
+        (item.unitDescription === "Per Sheet" || item.unitDescription === "Per Meter") &&
+        item.units > 0 &&
+        item.pricePerUnit <= 0
+    )
+    .map((item) => item.name);
+
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
@@ -577,6 +587,15 @@ export const QuoteGenerator = ({ cuttingItems, optimizedSheets, cuttingListId }:
                 </div>
               ) : (
                 <>
+                  {unpricedItems.length > 0 && (
+                    <Alert className="mb-4">
+                      <AlertTitle>Missing prices</AlertTitle>
+                      <AlertDescription>
+                        Add prices for: {unpricedItems.join(", ")} in Company Settings (Materials/Edging).
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
                   <div className="border rounded-lg overflow-hidden">
                     <table className="w-full">
                       <thead className="bg-muted">
