@@ -142,7 +142,9 @@ export const CompanySettings = () => {
         .from("ip_company_settings")
         .select("*")
         .eq("ip_address", ipAddress)
-        .single();
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
       if (companyData) {
         setCompanyInfo({

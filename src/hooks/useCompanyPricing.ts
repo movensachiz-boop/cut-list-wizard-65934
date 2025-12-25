@@ -59,15 +59,26 @@ export const useCompanyPricing = () => {
   };
 
   const loadPricing = useCallback(async () => {
-    if (!ipAddress) return;
+    if (!ipAddress) {
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
 
     try {
-      // Load company info
-      const { data: companyData } = await supabase
+      // Load company info (if it exists)
+      const { data: companyData, error: companyError } = await supabase
         .from("ip_company_settings")
         .select("*")
         .eq("ip_address", ipAddress)
-        .single();
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (companyError) {
+        console.error("Error loading company settings:", companyError);
+      }
 
       if (companyData) {
         setCompanyInfo({
@@ -84,26 +95,28 @@ export const useCompanyPricing = () => {
           bank_branch: companyData.bank_branch || "",
           quote_validity_days: companyData.quote_validity_days ?? 30,
         });
+      } else {
+        setCompanyInfo(null);
       }
 
-      // Load material prices
-      const { data: materialsData } = await supabase
-        .from("ip_material_prices")
-        .select("*")
-        .eq("ip_address", ipAddress);
+      // Load material + edging prices (even if company settings is missing)
+      const [materialsRes, edgingRes] = await Promise.all([
+        supabase.from("ip_material_prices").select("*").eq("ip_address", ipAddress),
+        supabase.from("ip_edging_prices").select("*").eq("ip_address", ipAddress),
+      ]);
 
-      if (materialsData) {
-        setMaterialPrices(materialsData);
+      if (materialsRes.error) {
+        console.error("Error loading material prices:", materialsRes.error);
+        setMaterialPrices([]);
+      } else {
+        setMaterialPrices(materialsRes.data ?? []);
       }
 
-      // Load edging prices
-      const { data: edgingData } = await supabase
-        .from("ip_edging_prices")
-        .select("*")
-        .eq("ip_address", ipAddress);
-
-      if (edgingData) {
-        setEdgingPrices(edgingData);
+      if (edgingRes.error) {
+        console.error("Error loading edging prices:", edgingRes.error);
+        setEdgingPrices([]);
+      } else {
+        setEdgingPrices(edgingRes.data ?? []);
       }
     } catch (err) {
       console.error("Error loading pricing:", err);
