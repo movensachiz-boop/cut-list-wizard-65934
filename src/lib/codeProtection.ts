@@ -56,36 +56,33 @@ export const initCodeProtection = () => {
     });
   }
 
-  // DevTools detection and response
-  let devtoolsOpen = false;
-  
-  const detectDevTools = () => {
-    const threshold = 160;
-    const widthThreshold = window.outerWidth - window.innerWidth > threshold;
-    const heightThreshold = window.outerHeight - window.innerHeight > threshold;
-    
-    if (widthThreshold || heightThreshold) {
-      if (!devtoolsOpen) {
-        devtoolsOpen = true;
-        handleDevToolsOpen();
-      }
-    } else {
-      devtoolsOpen = false;
-    }
-  };
-
-  const handleDevToolsOpen = () => {
-    // Clear the page content or redirect
-    if (import.meta.env.PROD) {
-      document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#111;color:#fff;font-family:sans-serif;"><h1>Access Denied</h1></div>';
-    }
-  };
-
-  // Check periodically
-  setInterval(detectDevTools, 1000);
-
-  // Debugger trap (makes debugging difficult)
+  // DevTools detection and response - ONLY in production
   if (import.meta.env.PROD) {
+    let devtoolsOpen = false;
+    
+    const detectDevTools = () => {
+      const threshold = 160;
+      const widthThreshold = window.outerWidth - window.innerWidth > threshold;
+      const heightThreshold = window.outerHeight - window.innerHeight > threshold;
+      
+      if (widthThreshold || heightThreshold) {
+        if (!devtoolsOpen) {
+          devtoolsOpen = true;
+          handleDevToolsOpen();
+        }
+      } else {
+        devtoolsOpen = false;
+      }
+    };
+
+    const handleDevToolsOpen = () => {
+      document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#111;color:#fff;font-family:sans-serif;"><h1>Access Denied</h1></div>';
+    };
+
+    // Check periodically
+    setInterval(detectDevTools, 1000);
+
+    // Debugger trap (makes debugging difficult)
     setInterval(() => {
       const before = new Date().getTime();
       debugger;
