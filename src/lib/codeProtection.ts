@@ -1,6 +1,11 @@
 // Code protection utilities to prevent inspection
 
 export const initCodeProtection = () => {
+  // Skip ALL protection in development mode
+  if (!import.meta.env.PROD) {
+    return;
+  }
+
   // Disable right-click context menu
   document.addEventListener('contextmenu', (e) => {
     e.preventDefault();
@@ -47,58 +52,52 @@ export const initCodeProtection = () => {
   });
 
   // Disable console methods in production
-  if (import.meta.env.PROD) {
-    const noop = () => {};
-    const methods = ['log', 'debug', 'info', 'warn', 'error', 'table', 'trace', 'dir', 'dirxml', 'group', 'groupCollapsed', 'groupEnd', 'clear', 'count', 'countReset', 'assert', 'profile', 'profileEnd', 'time', 'timeLog', 'timeEnd', 'timeStamp'];
+  const noop = () => {};
+  const methods = ['log', 'debug', 'info', 'warn', 'error', 'table', 'trace', 'dir', 'dirxml', 'group', 'groupCollapsed', 'groupEnd', 'clear', 'count', 'countReset', 'assert', 'profile', 'profileEnd', 'time', 'timeLog', 'timeEnd', 'timeStamp'];
+  
+  methods.forEach((method) => {
+    (console as any)[method] = noop;
+  });
+
+  // DevTools detection and response
+  let devtoolsOpen = false;
+  
+  const detectDevTools = () => {
+    const threshold = 160;
+    const widthThreshold = window.outerWidth - window.innerWidth > threshold;
+    const heightThreshold = window.outerHeight - window.innerHeight > threshold;
     
-    methods.forEach((method) => {
-      (console as any)[method] = noop;
-    });
-  }
-
-  // DevTools detection and response - ONLY in production
-  if (import.meta.env.PROD) {
-    let devtoolsOpen = false;
-    
-    const detectDevTools = () => {
-      const threshold = 160;
-      const widthThreshold = window.outerWidth - window.innerWidth > threshold;
-      const heightThreshold = window.outerHeight - window.innerHeight > threshold;
-      
-      if (widthThreshold || heightThreshold) {
-        if (!devtoolsOpen) {
-          devtoolsOpen = true;
-          handleDevToolsOpen();
-        }
-      } else {
-        devtoolsOpen = false;
-      }
-    };
-
-    const handleDevToolsOpen = () => {
-      document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#111;color:#fff;font-family:sans-serif;"><h1>Access Denied</h1></div>';
-    };
-
-    // Check periodically
-    setInterval(detectDevTools, 1000);
-
-    // Debugger trap (makes debugging difficult)
-    setInterval(() => {
-      const before = new Date().getTime();
-      debugger;
-      const after = new Date().getTime();
-      if (after - before > 100) {
+    if (widthThreshold || heightThreshold) {
+      if (!devtoolsOpen) {
+        devtoolsOpen = true;
         handleDevToolsOpen();
       }
-    }, 1000);
-  }
-
-  // Prevent text selection (optional - can be annoying)
-  document.addEventListener('selectstart', (e) => {
-    if (import.meta.env.PROD) {
-      e.preventDefault();
-      return false;
+    } else {
+      devtoolsOpen = false;
     }
+  };
+
+  const handleDevToolsOpen = () => {
+    document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#111;color:#fff;font-family:sans-serif;"><h1>Access Denied</h1></div>';
+  };
+
+  // Check periodically
+  setInterval(detectDevTools, 1000);
+
+  // Debugger trap (makes debugging difficult)
+  setInterval(() => {
+    const before = new Date().getTime();
+    debugger;
+    const after = new Date().getTime();
+    if (after - before > 100) {
+      handleDevToolsOpen();
+    }
+  }, 1000);
+
+  // Prevent text selection
+  document.addEventListener('selectstart', (e) => {
+    e.preventDefault();
+    return false;
   });
 
   // Prevent drag
