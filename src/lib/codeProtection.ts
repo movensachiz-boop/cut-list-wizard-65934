@@ -10,8 +10,12 @@ export const initCodeProtection = () => {
   // DevTools detection is inherently unreliable across browsers/OSes.
   // We keep a conservative signal (window size deltas) and show a reversible
   // overlay instead of permanently wiping the DOM.
-  const DEVTOOLS_SIZE_THRESHOLD_PX = 160;
-  const DEVTOOLS_CONFIRM_TICKS = 2; // require consecutive detections
+  // Edge can report larger outer/inner deltas than Chrome (borders/UI scaling),
+  // so we use higher thresholds + a longer confirm window to reduce false positives.
+  const IS_EDGE = /Edg\//.test(navigator.userAgent);
+  const DEVTOOLS_SIZE_THRESHOLD_PX = IS_EDGE ? 360 : 260;
+  const DEVTOOLS_EXTREME_THRESHOLD_PX = IS_EDGE ? 520 : 460;
+  const DEVTOOLS_CONFIRM_TICKS = 3; // require consecutive detections
   const DEVTOOLS_BLOCKER_ID = "__devtools_blocker";
 
   // Disable right-click context menu
@@ -73,12 +77,22 @@ export const initCodeProtection = () => {
   const isDevToolsLikelyOpen = () => {
     // Some environments can report 0 for outerWidth/outerHeight.
     if (!window.outerWidth || !window.outerHeight) return false;
-    const widthDiff = Math.abs(window.outerWidth - window.innerWidth);
-    const heightDiff = Math.abs(window.outerHeight - window.innerHeight);
-    return (
-      widthDiff > DEVTOOLS_SIZE_THRESHOLD_PX ||
-      heightDiff > DEVTOOLS_SIZE_THRESHOLD_PX
-    );
+    const widthDiff = window.outerWidth - window.innerWidth;
+    const heightDiff = window.outerHeight - window.innerHeight;
+
+    // Guard against weird negative values.
+    if (widthDiff < 0 || heightDiff < 0) return false;
+
+    // Only treat as DevTools if the delta is clearly beyond normal browser chrome.
+    // - extreme single-dimension delta: likely devtools docked
+    // - both dimensions above threshold: more confident
+    const extreme =
+      widthDiff > DEVTOOLS_EXTREME_THRESHOLD_PX ||
+      heightDiff > DEVTOOLS_EXTREME_THRESHOLD_PX;
+    const both =
+      widthDiff > DEVTOOLS_SIZE_THRESHOLD_PX &&
+      heightDiff > DEVTOOLS_SIZE_THRESHOLD_PX;
+    return extreme || both;
   };
 
   const showDevToolsBlocker = () => {
