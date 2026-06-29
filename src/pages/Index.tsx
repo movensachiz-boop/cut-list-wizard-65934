@@ -883,7 +883,7 @@ const Index = () => {
         {/* News & Announcements Section */}
         <Announcements />
 
-        <ImageAnalysisSection isAnalyzing={isAnalyzing} analysisProgress={analysisProgress} fileInputRef={fileInputRef} cameraInputRef={cameraInputRef} handleFileUpload={handleFileUpload} handleCameraCapture={handleCameraCapture} />
+        <ImageAnalysisSection isAnalyzing={isAnalyzing} analysisProgress={analysisProgress} fileInputRef={fileInputRef} cameraInputRef={cameraInputRef} handleFileUpload={handleFileUpload} handleCameraCapture={handleCameraCapture} onCameraFile={analyzeImage} />
 
         {/* Input Section */}
         <Card className="p-8 mb-8 border-2 border-primary/20 glass-effect hover:border-primary/30 transition-all duration-300 group relative overflow-hidden">

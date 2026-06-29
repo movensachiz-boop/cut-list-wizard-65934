@@ -1,7 +1,9 @@
 // Image Analysis Section with automated dimension extraction
+import { useState } from "react";
 import { Camera, ImageIcon, ScanLine, Target, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { CameraCapture } from "./CameraCapture";
 
 interface ImageAnalysisSectionProps {
   isAnalyzing: boolean;
@@ -10,6 +12,7 @@ interface ImageAnalysisSectionProps {
   cameraInputRef: React.RefObject<HTMLInputElement>;
   handleFileUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleCameraCapture: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onCameraFile?: (file: File) => void;
 }
 
 export const ImageAnalysisSection = ({
@@ -18,8 +21,26 @@ export const ImageAnalysisSection = ({
   fileInputRef,
   cameraInputRef,
   handleFileUpload,
-  handleCameraCapture
+  handleCameraCapture,
+  onCameraFile,
 }: ImageAnalysisSectionProps) => {
+  const [cameraOpen, setCameraOpen] = useState(false);
+
+  const handleCustomCapture = (file: File) => {
+    if (onCameraFile) {
+      onCameraFile(file);
+    } else {
+      // Fallback: synthesize a change event on the hidden camera input
+      const dt = new DataTransfer();
+      dt.items.add(file);
+      if (cameraInputRef.current) {
+        cameraInputRef.current.files = dt.files;
+        const event = new Event("change", { bubbles: true });
+        cameraInputRef.current.dispatchEvent(event);
+      }
+    }
+  };
+
   return (
     <Card className="p-8 mb-10 border-2 border-primary/20 glass-effect relative overflow-hidden group hover:border-primary/40 transition-all duration-500">
       {/* Animated gradient orbs */}
@@ -44,15 +65,11 @@ export const ImageAnalysisSection = ({
         {isAnalyzing ? (
           <div className="flex flex-col items-center gap-6 py-12 animate-fade-in">
             <div className="relative">
-              {/* Outer spinning ring with gradient */}
               <div className="w-32 h-32 rounded-full border-4 border-primary/10 border-t-primary animate-spin shadow-lg glow-primary"></div>
-              {/* Middle spinning ring - opposite direction */}
               <div className="absolute inset-2 w-28 h-28 rounded-full border-4 border-accent/10 border-b-accent animate-spin shadow-md glow-accent" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }}></div>
-              {/* Inner pulsing circle */}
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="w-20 h-20 rounded-full gradient-primary opacity-20 animate-pulse"></div>
               </div>
-              {/* Center percentage with gradient */}
               <div className="absolute inset-0 flex items-center justify-center">
                 <span className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
                   {Math.round(analysisProgress)}%
@@ -72,7 +89,7 @@ export const ImageAnalysisSection = ({
             <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileUpload} className="hidden" />
             <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" onChange={handleCameraCapture} className="hidden" />
 
-            <Button onClick={() => cameraInputRef.current?.click()} disabled={isAnalyzing} size="lg" variant="default" className="gap-2 min-w-[160px]">
+            <Button onClick={() => setCameraOpen(true)} disabled={isAnalyzing} size="lg" variant="default" className="gap-2 min-w-[160px]">
               <Camera className="h-5 w-5" />
               Take Photo
             </Button>
@@ -87,7 +104,7 @@ export const ImageAnalysisSection = ({
         <div className="flex flex-wrap items-center justify-center gap-4 text-sm text-muted-foreground">
           <span className="flex items-center gap-2">
             <ScanLine className="h-4 w-4" />
-            Instant extraction
+            Zoom for detail
           </span>
           <span className="text-border">•</span>
           <span className="flex items-center gap-2">
@@ -101,6 +118,12 @@ export const ImageAnalysisSection = ({
           </span>
         </div>
       </div>
+
+      <CameraCapture
+        open={cameraOpen}
+        onClose={() => setCameraOpen(false)}
+        onCapture={handleCustomCapture}
+      />
     </Card>
   );
 };
