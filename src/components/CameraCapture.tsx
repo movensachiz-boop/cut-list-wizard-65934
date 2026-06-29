@@ -50,14 +50,16 @@ export const CameraCapture = ({ open, onClose, onCapture }: CameraCaptureProps) 
       }
 
       const track = stream.getVideoTracks()[0];
-      // @ts-expect-error - non-standard but widely supported on mobile
-      const caps = track.getCapabilities?.() ?? {};
+      const caps = (track.getCapabilities?.() ?? {}) as MediaTrackCapabilities & {
+        zoom?: { min: number; max: number; step: number };
+      };
       if (caps.zoom) {
         setSupportsNativeZoom(true);
         setMinZoom(caps.zoom.min ?? 1);
         setMaxZoom(caps.zoom.max ?? 5);
         setZoomStep(caps.zoom.step ?? 0.1);
         setZoom(caps.zoom.min ?? 1);
+
       } else {
         setSupportsNativeZoom(false);
         setMinZoom(1);
