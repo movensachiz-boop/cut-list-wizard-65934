@@ -306,11 +306,10 @@ If you cannot find any items, return "NO_ITEMS_FOUND"`
 
   } catch (error) {
     console.error('Error in analyze-image function:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Failed to analyze image';
     return new Response(
       JSON.stringify({ 
         success: false,
-        error: errorMessage
+        error: 'Error 3546'
       }),
       {
         status: 500,
