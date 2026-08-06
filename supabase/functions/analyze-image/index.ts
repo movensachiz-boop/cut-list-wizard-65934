@@ -173,7 +173,7 @@ If you cannot find any items, return "NO_ITEMS_FOUND"`
     if (!response.ok) {
       const errorText = await response.text();
       console.error('AI gateway error:', response.status, errorText);
-      throw new Error(`AI gateway error: ${response.status}`);
+      throw new Error('Error 3546');
     }
 
     const result = await response.json();
