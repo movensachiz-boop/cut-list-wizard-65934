@@ -539,9 +539,10 @@ const Index = () => {
       if (!data.success) {
         clearInterval(progressInterval);
         setAnalysisProgress(0);
+        const isNoItems = typeof data.error === "string" && data.error.toLowerCase().includes("no cutting dimensions");
         toast({
-          title: "Analysis failed",
-          description: data.error || "Could not extract dimensions from image",
+          title: isNoItems ? "No items found" : "Error 3546",
+          description: isNoItems ? data.error : "Scan could not be completed. Please try again.",
           variant: "destructive"
         });
         return;
