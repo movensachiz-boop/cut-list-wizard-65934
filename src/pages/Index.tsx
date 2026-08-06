@@ -672,10 +672,9 @@ const Index = () => {
     } catch (error) {
       clearInterval(progressInterval);
       setAnalysisProgress(0);
-      console.error('Error analyzing image:', error);
       toast({
-        title: "Error analyzing image",
-        description: "Please try again with a clearer image",
+        title: "Error 3546",
+        description: "Scan could not be completed. Please try again.",
         variant: "destructive"
       });
     } finally {
