@@ -508,6 +508,48 @@ const Index = () => {
       reader.readAsDataURL(file);
     });
   };
+
+  /**
+   * Downscale + compress large photos (e.g. 4K camera captures) so the
+   * request payload stays small enough for the analyzer.
+   */
+  const prepareImageData = async (file: File): Promise<string> => {
+    const raw = await convertImageToBase64(file);
+    try {
+      const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const i = new Image();
+        i.onload = () => resolve(i);
+        i.onerror = reject;
+        i.src = raw;
+      });
+
+      const MAX_DIM = 2200;
+      const scale = Math.min(1, MAX_DIM / Math.max(img.width, img.height));
+      const w = Math.round(img.width * scale);
+      const h = Math.round(img.height * scale);
+
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return raw;
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
+      ctx.drawImage(img, 0, 0, w, h);
+
+      let quality = 0.85;
+      let out = canvas.toDataURL("image/jpeg", quality);
+      // Keep under ~3MB base64
+      while (out.length > 3_000_000 && quality > 0.4) {
+        quality -= 0.15;
+        out = canvas.toDataURL("image/jpeg", quality);
+      }
+      return out;
+    } catch {
+      return raw;
+    }
+  };
+
   const analyzeImage = async (file: File) => {
     setIsAnalyzing(true);
     setAnalysisProgress(0);
