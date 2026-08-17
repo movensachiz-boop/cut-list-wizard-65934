@@ -564,7 +564,7 @@ const Index = () => {
     try {
       // Convert image to base64
       setAnalysisProgress(20);
-      const imageData = await convertImageToBase64(file);
+      const imageData = await prepareImageData(file);
 
       // Call edge function to analyze image
       setAnalysisProgress(40);
