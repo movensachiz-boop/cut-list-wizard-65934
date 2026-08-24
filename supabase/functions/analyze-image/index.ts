@@ -175,7 +175,7 @@ If you cannot find any items, return "NO_ITEMS_FOUND"`
       console.error('AI gateway error:', response.status, errorText);
       if (response.status === 402) {
         return new Response(
-          JSON.stringify({ success: false, error: 'Scanning is temporarily unavailable — the account needs a top-up to continue image analysis.' }),
+          JSON.stringify({ success: false, error: 'Scanning is temporarily unavailable. Please try again later.' }),
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
@@ -185,7 +185,10 @@ If you cannot find any items, return "NO_ITEMS_FOUND"`
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-      throw new Error(`AI request failed (${response.status}): ${errorText}`);
+      return new Response(
+        JSON.stringify({ success: false, error: 'Scanning could not be completed. Please try again later.' }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
 
@@ -322,10 +325,10 @@ If you cannot find any items, return "NO_ITEMS_FOUND"`
     return new Response(
       JSON.stringify({ 
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: 'Scanning could not be completed. Please try again later.'
       }),
       {
-        status: 500,
+        status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
     );
