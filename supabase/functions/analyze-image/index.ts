@@ -325,10 +325,10 @@ If you cannot find any items, return "NO_ITEMS_FOUND"`
     return new Response(
       JSON.stringify({ 
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: 'Scanning could not be completed. Please try again later.'
       }),
       {
-        status: 500,
+        status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
     );
