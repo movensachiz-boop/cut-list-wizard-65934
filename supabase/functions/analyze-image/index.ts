@@ -173,7 +173,7 @@ If you cannot find any items, return "NO_ITEMS_FOUND"`
     if (!response.ok) {
       const errorText = await response.text();
       console.error('AI gateway error:', response.status, errorText);
-      throw new Error('Error 3546');
+      throw new Error(`AI request failed (${response.status}): ${errorText}`);
     }
 
     const result = await response.json();
@@ -309,7 +309,7 @@ If you cannot find any items, return "NO_ITEMS_FOUND"`
     return new Response(
       JSON.stringify({ 
         success: false,
-        error: 'Error 3546'
+        error: error instanceof Error ? error.message : 'Unknown error'
       }),
       {
         status: 500,
