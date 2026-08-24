@@ -715,9 +715,9 @@ const Index = () => {
       clearInterval(progressInterval);
       setAnalysisProgress(0);
       toast({
-        title: "Scan failed",
-        description: error instanceof Error ? error.message : "Scan could not be completed. Please try again.",
-        variant: "destructive"
+        title: "No items detected",
+        description: "Could not detect any cutting dimensions. Please try a clearer photo.",
+        variant: "default"
       });
     } finally {
       clearInterval(progressInterval);
