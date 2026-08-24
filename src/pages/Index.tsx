@@ -583,8 +583,8 @@ const Index = () => {
         setAnalysisProgress(0);
         const isNoItems = typeof data.error === "string" && data.error.toLowerCase().includes("no cutting dimensions");
         toast({
-          title: isNoItems ? "No items found" : "Error 3546",
-          description: isNoItems ? data.error : "Scan could not be completed. Please try again.",
+          title: isNoItems ? "No items found" : "Scan failed",
+          description: data.error || "Scan could not be completed. Please try again.",
           variant: "destructive"
         });
         return;
@@ -715,8 +715,8 @@ const Index = () => {
       clearInterval(progressInterval);
       setAnalysisProgress(0);
       toast({
-        title: "Error 3546",
-        description: "Scan could not be completed. Please try again.",
+        title: "Scan failed",
+        description: error instanceof Error ? error.message : "Scan could not be completed. Please try again.",
         variant: "destructive"
       });
     } finally {
