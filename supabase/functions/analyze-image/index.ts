@@ -173,8 +173,21 @@ If you cannot find any items, return "NO_ITEMS_FOUND"`
     if (!response.ok) {
       const errorText = await response.text();
       console.error('AI gateway error:', response.status, errorText);
+      if (response.status === 402) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'Scanning is temporarily unavailable — the account needs a top-up to continue image analysis.' }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      if (response.status === 429) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'Too many scans right now. Please wait a moment and try again.' }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
       throw new Error(`AI request failed (${response.status}): ${errorText}`);
     }
+
 
     const result = await response.json();
     const extractedText = result.choices?.[0]?.message?.content || '';
