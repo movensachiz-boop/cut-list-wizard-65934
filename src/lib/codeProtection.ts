@@ -71,72 +71,11 @@ export const initCodeProtection = () => {
     (console as any)[method] = noop;
   });
 
-  // DevTools detection and response
-  let consecutiveDevtoolsTicks = 0;
+  // DevTools detection disabled: it caused false "Access Denied" lockouts
+  // on legitimate devices (browser zoom, split screens, Edge chrome sizing).
+  const existingBlocker = document.getElementById("__devtools_blocker");
+  if (existingBlocker) existingBlocker.remove();
 
-  const isDevToolsLikelyOpen = () => {
-    // Some environments can report 0 for outerWidth/outerHeight.
-    if (!window.outerWidth || !window.outerHeight) return false;
-    const widthDiff = window.outerWidth - window.innerWidth;
-    const heightDiff = window.outerHeight - window.innerHeight;
-
-    // Guard against weird negative values.
-    if (widthDiff < 0 || heightDiff < 0) return false;
-
-    // Only treat as DevTools if the delta is clearly beyond normal browser chrome.
-    // - extreme single-dimension delta: likely devtools docked
-    // - both dimensions above threshold: more confident
-    const extreme =
-      widthDiff > DEVTOOLS_EXTREME_THRESHOLD_PX ||
-      heightDiff > DEVTOOLS_EXTREME_THRESHOLD_PX;
-    const both =
-      widthDiff > DEVTOOLS_SIZE_THRESHOLD_PX &&
-      heightDiff > DEVTOOLS_SIZE_THRESHOLD_PX;
-    return extreme || both;
-  };
-
-  const showDevToolsBlocker = () => {
-    if (document.getElementById(DEVTOOLS_BLOCKER_ID)) return;
-
-    const blocker = document.createElement("div");
-    blocker.id = DEVTOOLS_BLOCKER_ID;
-    blocker.setAttribute("role", "alert");
-    blocker.style.position = "fixed";
-    blocker.style.inset = "0";
-    blocker.style.zIndex = "2147483647";
-    blocker.style.display = "flex";
-    blocker.style.alignItems = "center";
-    blocker.style.justifyContent = "center";
-    blocker.style.background = "#111";
-    blocker.style.color = "#fff";
-    blocker.style.fontFamily = "system-ui, -apple-system, Segoe UI, Roboto, sans-serif";
-    blocker.style.padding = "24px";
-    blocker.innerHTML = "<h1 style=\"margin:0;font-size:32px;line-height:1.1;\">Access Denied</h1>";
-
-    // Append after body exists
-    if (document.body) document.body.appendChild(blocker);
-  };
-
-  const hideDevToolsBlocker = () => {
-    const blocker = document.getElementById(DEVTOOLS_BLOCKER_ID);
-    if (blocker) blocker.remove();
-  };
-
-  // Conservative check: require consecutive detections while tab is visible.
-  setInterval(() => {
-    if (document.visibilityState !== "visible") return;
-
-    if (isDevToolsLikelyOpen()) {
-      consecutiveDevtoolsTicks += 1;
-    } else {
-      consecutiveDevtoolsTicks = 0;
-      hideDevToolsBlocker();
-    }
-
-    if (consecutiveDevtoolsTicks >= DEVTOOLS_CONFIRM_TICKS) {
-      showDevToolsBlocker();
-    }
-  }, 1000);
 
   // Prevent text selection
   document.addEventListener('selectstart', (e) => {
