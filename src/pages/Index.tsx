@@ -929,7 +929,14 @@ const Index = () => {
         {/* News & Announcements Section */}
         <Announcements />
 
-        <ImageAnalysisSection isAnalyzing={isAnalyzing} analysisProgress={analysisProgress} fileInputRef={fileInputRef} cameraInputRef={cameraInputRef} handleFileUpload={handleFileUpload} handleCameraCapture={handleCameraCapture} onCameraFile={analyzeImage} />
+        {SCANNING_ENABLED ? (
+          <ImageAnalysisSection isAnalyzing={isAnalyzing} analysisProgress={analysisProgress} fileInputRef={fileInputRef} cameraInputRef={cameraInputRef} handleFileUpload={handleFileUpload} handleCameraCapture={handleCameraCapture} onCameraFile={analyzeImage} />
+        ) : (
+          <Card className="p-8 mb-10 border-2 border-primary/20 glass-effect text-center">
+            <h2 className="text-2xl font-bold text-foreground mb-2">Image Scanning</h2>
+            <p className="text-muted-foreground">Scanning is temporarily unavailable. Please check back soon.</p>
+          </Card>
+        )}
 
         {/* Input Section */}
         <Card className="p-8 mb-8 border-2 border-primary/20 glass-effect hover:border-primary/30 transition-all duration-300 group relative overflow-hidden">
