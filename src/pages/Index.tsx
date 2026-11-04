@@ -23,7 +23,7 @@ import { Calculator } from "@/components/Calculator";
 import { CompanySettings } from "@/components/CompanySettings";
 
 // Temporary switch for the image scanning feature. Set to true to turn scanning back on.
-const SCANNING_ENABLED = false;
+const SCANNING_ENABLED = true;
 
 const MATERIAL_OPTIONS = [
 // Traditional Materials
