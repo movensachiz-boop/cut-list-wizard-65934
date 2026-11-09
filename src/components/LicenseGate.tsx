@@ -6,6 +6,7 @@ import { Shield, AlertTriangle, Copy, Check } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { AbvImportantNotice } from "@/components/AbvImportantNotice";
 
 interface LicenseGateProps {
   children: React.ReactNode;
@@ -270,6 +271,7 @@ export const LicenseGate = ({ children }: LicenseGateProps) => {
 
   return (
     <>
+      {licenseInfo && <AbvImportantNotice companyName={licenseInfo.company_name} />}
       {/* Warning banner during logout countdown */}
       {logoutCountdown !== null && (
         <div className="fixed top-0 left-0 right-0 z-50 bg-destructive border-b border-destructive py-3 px-4 text-center animate-pulse">
