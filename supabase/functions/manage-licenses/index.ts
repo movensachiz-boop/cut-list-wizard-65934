@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { isAccessLocked } from './accessLock.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -67,6 +68,14 @@ serve(async (req) => {
     // Validate action doesn't require authentication
     if (action === 'validate') {
       const { license_key } = data;
+      const { data: statuses, error: lockError } = await supabase
+        .from('licenses').select('status');
+      if (lockError) throw lockError;
+      if (isAccessLocked((statuses ?? []).map((license) => license.status))) {
+        return new Response(JSON.stringify({ valid: false, blocked: true, error: 'Access Denied' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
       
       // Get geolocation data for logging
       const location = await getIPLocation(clientIP);

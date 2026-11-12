@@ -69,6 +69,16 @@ export const LicenseGate = ({ children }: LicenseGateProps) => {
   const checkStoredLicense = async () => {
     const stored = localStorage.getItem("app_license");
     if (!stored) {
+      setIsLicenseValid(false);
+      setLicenseInfo(null);
+      try {
+        const { data, error } = await supabase.functions.invoke('manage-licenses', {
+          body: { action: 'validate', license_key: '' }
+        });
+        if (!error && data?.blocked) setIsBlocked(true);
+      } catch {
+        // Without a key, access remains closed if the status check fails.
+      }
       setIsValidating(false);
       return;
     }
@@ -116,7 +126,7 @@ export const LicenseGate = ({ children }: LicenseGateProps) => {
           setIsLicenseValid(false);
           setLogoutCountdown(null);
           setIsBlocked(true);
-          toast.error("Your IP has been blocked");
+          toast.error("Access Denied");
           return false;
         }
         
