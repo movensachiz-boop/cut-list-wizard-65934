@@ -174,7 +174,8 @@ serve(async (req) => {
         
         return new Response(JSON.stringify({ 
           valid: false, 
-          error: 'License has been suspended',
+          error: 'Access Denied',
+          blocked: true,
           reason: license.suspended_reason 
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
