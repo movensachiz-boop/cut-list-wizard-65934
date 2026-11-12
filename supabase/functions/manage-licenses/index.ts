@@ -112,7 +112,6 @@ serve(async (req) => {
             error: 'Access denied from this location',
             blocked: true
           }), {
-            status: 403,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           });
         }
@@ -135,7 +134,6 @@ serve(async (req) => {
           valid: false, 
           error: 'License key is required' 
         }), {
-          status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
